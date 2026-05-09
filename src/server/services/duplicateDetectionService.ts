@@ -1,0 +1,64 @@
+import { findDuplicates } from "@/lib/ai/dedup";
+import { getMetaValues, getTransactions, setMetaValue, updateTransactionField } from "@/lib/sheets";
+import type { SheetSession } from "./types";
+
+const RUN_INTERVAL_MS = 60 * 60 * 1000;
+
+function isAiUnavailableError(err: unknown): boolean {
+  const message = err instanceof Error ? err.message : String(err);
+  return (
+    message.includes("API key") ||
+    message.includes("API Key") ||
+    message.includes("quota") ||
+    message.includes("429") ||
+    message.includes("503")
+  );
+}
+
+export async function runDuplicateDetection(session: SheetSession): Promise<void> {
+  const transactions = await getTransactions(session.accessToken, session.sheetId);
+  const previousDuplicates = transactions.filter((tx) => tx.is_duplicate);
+
+  await Promise.all(
+    previousDuplicates.map((tx) =>
+      updateTransactionField(session.accessToken, session.sheetId, tx.id, {
+        is_duplicate: false,
+        duplicate_ref: undefined,
+      })
+    )
+  );
+
+  const groups = await findDuplicates(transactions);
+
+  await Promise.all(
+    groups.flatMap((group) =>
+      group.duplicate_ids.map((duplicateId) =>
+        updateTransactionField(session.accessToken, session.sheetId, duplicateId, {
+          is_duplicate: true,
+          duplicate_ref: group.original_id,
+        })
+      )
+    )
+  );
+
+  await setMetaValue(session.accessToken, session.sheetId, "last_dedup_checked_at", new Date().toISOString());
+}
+
+export async function requestDuplicateDetection(
+  session: SheetSession
+): Promise<{ skipped: true } | { done: true } | { error: "ai_unavailable" | "detection_failed" }> {
+  const meta = await getMetaValues(session.accessToken, session.sheetId);
+  const lastRun = meta.last_dedup_checked_at ? new Date(meta.last_dedup_checked_at).getTime() : 0;
+
+  if (Date.now() - lastRun < RUN_INTERVAL_MS) {
+    return { skipped: true };
+  }
+
+  try {
+    await runDuplicateDetection(session);
+    return { done: true };
+  } catch (err) {
+    console.error("Duplicate detection error:", err);
+    return { error: isAiUnavailableError(err) ? "ai_unavailable" : "detection_failed" };
+  }
+}
