@@ -49,7 +49,10 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     const handleOnline = async () => {
       setOnline(true);
       const result = await flushQueue();
-      if (result.authExpired) return;
+      if (result.authExpired) {
+        setPendingCount(0); // Queue abandoned — layout interceptor will sign out
+        return;
+      }
       const count = await pendingCount();
       setPendingCount(count);
       await sync();

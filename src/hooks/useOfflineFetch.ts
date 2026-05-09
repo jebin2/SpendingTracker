@@ -1,7 +1,7 @@
 "use client";
 
 import { useAppStore } from "@/store";
-import { enqueueOp, pendingCount } from "@/lib/offline";
+import { enqueueOp, pendingCount, isFlushing } from "@/lib/offline";
 
 function parseBody(options: RequestInit & { offlineBody?: unknown }): unknown {
   if (options.offlineBody !== undefined) return options.offlineBody;
@@ -40,6 +40,12 @@ export function useOfflineFetch() {
 
     if (!isOnline) {
       if (method === "GET") throw new Error("Offline: cannot fetch");
+      return queueMutation(method, url, options, setPendingCount);
+    }
+
+    // If queue is currently flushing, queue new mutations rather than sending them
+    // directly — prevents PATCH/DELETE racing a concurrent POST for the same resource.
+    if (method !== "GET" && isFlushing()) {
       return queueMutation(method, url, options, setPendingCount);
     }
 

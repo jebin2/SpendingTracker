@@ -64,3 +64,9 @@ export async function flushQueue(): Promise<{ authExpired: boolean }> {
 export async function pendingCount(): Promise<number> {
   return offlineDb.queue.count();
 }
+
+// Exposed so safeFetch can queue mutations while flush is in progress,
+// preventing PATCH/DELETE from racing a concurrent POST on the server.
+export function isFlushing(): boolean {
+  return flushing;
+}

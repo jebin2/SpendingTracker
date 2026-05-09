@@ -109,6 +109,7 @@ function DetailContent({ id }: { id: string }) {
 
   async function retryAI() {
     if (!tx || retrying) return;
+    setError(null);
     setRetrying(true);
     const region = localStorage.getItem("region") ?? "Chennai, India";
     await fetch("/api/receipts/process", {
