@@ -23,8 +23,5 @@ export default withPWA({
   workboxOptions: {
     skipWaiting: true,
     clientsClaim: true,
-    navigateFallback: "/offline.html",
-    // Exclude API and internal Next.js paths from fallback
-    navigateFallbackDenylist: [/^\/api\//, /^\/_next\//],
   },
 })(nextConfig);
