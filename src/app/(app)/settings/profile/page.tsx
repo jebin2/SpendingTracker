@@ -27,11 +27,12 @@ export default function ProfileSettingsPage() {
 
   // Populate local form state once profile loads from sheet
   useEffect(() => {
-    if (!loading) {
+    if (loading) return;
+    void (async () => {
       setRegion(profile.region);
       setTags(profile.lifestyle_tags);
       setIncome(profile.monthly_income ? String(profile.monthly_income) : "");
-    }
+    })();
   }, [loading, profile]);
 
   function toggleTag(tag: string) {

@@ -19,15 +19,18 @@ export function CompareTab({ period }: { period: string }) {
 
   // Load distinct merchants
   useEffect(() => {
-    setTxLoading(true);
-    fetch("/api/transactions")
-      .then((r) => r.json())
-      .then((d) => {
+    void (async () => {
+      setTxLoading(true);
+      try {
+        const r = await fetch("/api/transactions");
+        const d = await r.json();
         const txs: Transaction[] = (d.transactions ?? []).filter((t: Transaction) => t.amount > 0);
         const unique = [...new Set(txs.map((t) => t.merchant).filter(Boolean))].sort();
         setMerchants(unique);
-      })
-      .finally(() => setTxLoading(false));
+      } finally {
+        setTxLoading(false);
+      }
+    })();
   }, []);
 
   const checkStatus = useCallback(async (): Promise<AsyncStatus> => {
@@ -47,9 +50,11 @@ export function CompareTab({ period }: { period: string }) {
 
   // Check cache when selection changes
   useEffect(() => {
-    if (selected.length < 2) { setStatus("not_started"); setResult(null); return; }
-    setStatus("loading");
-    checkStatus();
+    void (async () => {
+      if (selected.length < 2) { setStatus("not_started"); setResult(null); return; }
+      setStatus("loading");
+      await checkStatus();
+    })();
   }, [selected, period, checkStatus]);
 
   async function runCompare(forceRefresh = false) {

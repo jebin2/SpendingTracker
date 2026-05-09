@@ -36,6 +36,7 @@ export async function ensureTransactionSchema(
 
 export async function initSpendingSheet(
   accessToken: string,
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   _userName: string
 ): Promise<{ sheetId: string; sheetUrl: string; isNew: boolean }> {
   const drive = getDriveClient(accessToken);

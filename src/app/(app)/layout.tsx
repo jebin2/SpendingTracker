@@ -48,7 +48,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       window.fetch = original;
       fetchIntercepted = false;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -57,7 +56,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (session?.error === "RefreshTokenError") triggerSignOut();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.error]);
 
   if (status === "loading") {

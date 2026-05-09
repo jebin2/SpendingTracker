@@ -20,7 +20,7 @@ export default function SheetSettingsPage() {
       .then((r) => r.json())
       .then((d) => {
         const txs: Transaction[] = d.transactions ?? [];
-        setTxCount(txs.filter((t) => true).length);
+        setTxCount(txs.length);
         setLastSynced(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
       });
   }, []);
@@ -30,7 +30,7 @@ export default function SheetSettingsPage() {
     try {
       const res = await fetch("/api/transactions");
       const d = await res.json();
-      setTxCount((d.transactions ?? []).filter((t: Transaction) => true).length);
+      setTxCount((d.transactions ?? []).length);
       setLastSynced(new Date().toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }));
     } finally {
       setSyncing(false);

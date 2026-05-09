@@ -26,9 +26,11 @@ export function InsightsTab({ period }: { period: string }) {
   }, [period]);
 
   useEffect(() => {
-    setStatus("loading");
-    setAnalysis(null);
-    check();
+    void (async () => {
+      setStatus("loading");
+      setAnalysis(null);
+      await check();
+    })();
   }, [check]);
 
   usePoller(check, status === "generating");

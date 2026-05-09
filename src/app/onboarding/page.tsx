@@ -73,7 +73,9 @@ export default function OnboardingPage() {
   }
 
   useEffect(() => {
-    if (step === "shortcut") loadToken();
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (step === "shortcut") void loadToken();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [step]);
 
   function toggleTag(tag: string) {

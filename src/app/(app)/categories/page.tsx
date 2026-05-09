@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { Category } from "@/types";
 
 const categoryColors = [
@@ -10,22 +10,9 @@ const categoryColors = [
 
 export default function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
   const [newName, setNewName] = useState("");
   const [newIcon, setNewIcon] = useState("📦");
-  const [adding, setAdding] = useState(false);
   const [showForm, setShowForm] = useState(false);
-
-  useEffect(() => {
-    const sheetId = localStorage.getItem("sheetId");
-    if (!sheetId) { setLoading(false); return; }
-    fetch(`/api/transactions?sheetId=${sheetId}`)
-      .then(() => {
-        // Categories are cached locally from sheet; for now use default set
-        setLoading(false);
-      })
-      .catch(() => setLoading(false));
-  }, []);
 
   const defaults = [
     { name: "Food & Dining", icon: "🍽️", color: "#FF6B6B", subs: ["Restaurants", "Cafes", "Swiggy/Zomato", "Groceries"] },

@@ -78,7 +78,7 @@ function DetailContent({ id }: { id: string }) {
       }
     }, 5000);
     return () => clearInterval(timer);
-  }, [tx?.status, id, isOnline]);
+  }, [tx, id, isOnline]);
 
   async function deleteTransaction() {
     if (!confirm("Delete this transaction?")) return;
