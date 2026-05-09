@@ -2,7 +2,7 @@
   "name": "SpendingTracker",
   "short_name": "Spending",
   "description": "Your AI spending agent",
-  "start_url": "/dashboard",
+  "start_url": "/",
   "display": "standalone",
   "background_color": "#fcf8ff",
   "theme_color": "#1f108e",
