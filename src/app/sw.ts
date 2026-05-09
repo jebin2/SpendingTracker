@@ -1,6 +1,6 @@
 import { defaultCache } from "@serwist/next/worker";
 import type { PrecacheEntry, SerwistGlobalConfig } from "serwist";
-import { Serwist, NetworkFirst, ExpirationPlugin, CacheableResponsePlugin } from "serwist";
+import { Serwist, NetworkFirst, NetworkOnly, ExpirationPlugin, CacheableResponsePlugin } from "serwist";
 
 declare global {
   interface WorkerGlobalScope extends SerwistGlobalConfig {
@@ -26,6 +26,16 @@ const serwist = new Serwist({
           new CacheableResponsePlugin({ statuses: [200] }),
         ],
       }),
+    },
+    // All other API routes — NetworkOnly so they always either return fresh
+    // data or fail. Never serve stale cached API responses offline — the app
+    // handles offline via IndexedDB/Zustand, not via SW-cached API responses.
+    // (Without this, defaultCache's "apis" NetworkFirst cache would serve a
+    // stale /api/transactions response offline, overwriting the Zustand store
+    // and erasing any offline-added transactions.)
+    {
+      matcher: /^https?:\/\/[^/]+\/api\//,
+      handler: new NetworkOnly(),
     },
     // HTML pages — defaultCache's "pages" matcher checks Content-Type on
     // the REQUEST which is always empty for navigations. Use mode:navigate
