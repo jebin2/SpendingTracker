@@ -27,15 +27,16 @@ export async function checkDuplicate(
     `Check if this new transaction is a duplicate of any of the recent ones.
 
 New transaction:
-${JSON.stringify({ merchant: newTransaction.merchant, amount: newTransaction.amount, date: newTransaction.date, time: newTransaction.time })}
+${JSON.stringify({ merchant: newTransaction.merchant, item_name: newTransaction.item_name, amount: newTransaction.amount, date: newTransaction.date, time: newTransaction.time })}
 
 Recent transactions (last 24h):
-${JSON.stringify(candidates.map((t) => ({ id: t.id, merchant: t.merchant, amount: t.amount, date: t.date, time: t.time })))}
+${JSON.stringify(candidates.map((t) => ({ id: t.id, merchant: t.merchant, item_name: t.item_name, amount: t.amount, date: t.date, time: t.time })))}
 
 Duplicate criteria:
-- HIGH confidence (>0.85): Same merchant + same amount + within 2 hours
-- MEDIUM confidence (0.6-0.85): Same merchant + amount within 5% + same day
-- LOW confidence (<0.6): Same amount + same day, different merchant
+- HIGH confidence (>0.85): Same item_name + same amount + within 2 hours (merchant "Unknown" is ignored)
+- MEDIUM confidence (0.6-0.85): Same item_name + same merchant (not "Unknown") + amount within 5% + same day
+- LOW/NO duplicate: merchant is "Unknown" on both sides without matching item_name — do NOT flag as duplicate
+- Different item names = NOT a duplicate even if amount and merchant match
 
 Respond with JSON only:
 {

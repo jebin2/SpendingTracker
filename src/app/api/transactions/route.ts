@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     try {
       const recent = await getTransactions(session.access_token, session.sheet_id, 100);
       const dedupResult = await checkDuplicate(tx, recent);
-      duplicate = dedupResult.is_duplicate && dedupResult.confidence > 0.7 ? dedupResult : null;
+      duplicate = dedupResult.is_duplicate && dedupResult.confidence > 0.85 ? dedupResult : null;
     } catch {
       // AI unavailable — skip dedup silently
     }
