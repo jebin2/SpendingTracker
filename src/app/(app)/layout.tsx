@@ -31,8 +31,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const original = window.fetch;
     window.fetch = async (...args) => {
       const res = await original(...args);
-      const url = typeof args[0] === "string" ? args[0] : args[0]?.toString?.() ?? "";
-      if (res.status === 401 && url.startsWith("/api/")) {
+      const input = args[0];
+      const url =
+        typeof input === "string" ? input :
+        input instanceof Request ? input.url :
+        input instanceof URL ? input.pathname :
+        "";
+      if (res.status === 401 && url.includes("/api/")) {
         triggerSignOut();
       }
       return res;

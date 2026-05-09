@@ -32,7 +32,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   try {
     await updateTransactionField(session.access_token, session.sheet_id, id, updates);
-    return NextResponse.json({ ok: true });
+    // Return applied updates so client can confirm what the server accepted
+    return NextResponse.json({ ok: true, updates });
   } catch (err) {
     return apiError("PATCH transaction error", err);
   }

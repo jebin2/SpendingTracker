@@ -52,15 +52,17 @@ export function EditForm({
         offlineBody: updates,
       });
 
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({ error: "Save failed" }));
-        throw new Error((data as { error?: string }).error ?? "Save failed");
+      const data = await res.json().catch(() => ({ offline: true })) as { ok?: boolean; updates?: Partial<Transaction>; error?: string; offline?: boolean };
+
+      if (!res.ok && !data.offline) {
+        throw new Error(data.error ?? "Save failed");
       }
 
-      // Keep store and IndexedDB in sync regardless of online/offline
-      updateTransaction(tx.id, updates);
-      await patchLocalTransaction(tx.id, updates);
-      onSaved({ ...tx, ...updates });
+      // Use server-confirmed updates when available; fall back to local updates
+      const confirmed = data.updates ?? updates;
+      updateTransaction(tx.id, confirmed);
+      await patchLocalTransaction(tx.id, confirmed);
+      onSaved({ ...tx, ...confirmed });
     } finally {
       setSaving(false);
     }

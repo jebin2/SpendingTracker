@@ -82,6 +82,7 @@ function DetailContent({ id }: { id: string }) {
 
   async function deleteTransaction() {
     if (!confirm("Delete this transaction?")) return;
+    setError(null);
     setDeleting(true);
     try {
       if (isOnline) {
