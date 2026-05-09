@@ -29,13 +29,27 @@ export default withPWA({
     additionalManifestEntries: [{ url: "/", revision: null }],
     runtimeCaching: [
       {
-        // Cache all app page HTML with NetworkFirst so visited pages are
-        // served from cache when offline. Excludes /_next/ and /api/.
+        // Cache /api/auth/session so NextAuth's useSession works offline.
+        // Without this, session fails to load → shows unauthenticated landing page.
+        urlPattern: /^https?:\/\/[^/]+\/api\/auth\/session/,
+        handler: "NetworkFirst",
+        options: {
+          cacheName: "auth-session",
+          networkTimeoutSeconds: 3,
+          expiration: { maxEntries: 1, maxAgeSeconds: 3600 },
+          cacheableResponse: { statuses: [200] },
+        },
+      },
+      {
+        // Cache all app page HTML + RSC payloads with NetworkFirst.
+        // ignoreSearch: true strips ?_rsc=... query params from cache keys so
+        // prefetched RSC responses are reused for subsequent navigations offline.
         urlPattern: /^https?:\/\/[^/]+(?!\/_next)(?!\/api).*/,
         handler: "NetworkFirst",
         options: {
           cacheName: "app-pages",
           networkTimeoutSeconds: 3,
+          matchOptions: { ignoreSearch: true },
           expiration: { maxEntries: 128, maxAgeSeconds: 86400 },
           cacheableResponse: { statuses: [200] },
         },

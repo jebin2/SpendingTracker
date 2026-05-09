@@ -10,7 +10,11 @@ export default function LandingPage() {
 
   useEffect(() => {
     if (status === "authenticated") {
-      router.replace("/dashboard");
+      // When SW serves "/" as the app shell for offline navigation to other routes
+      // (e.g. /transactions/abc), respect the actual URL instead of always
+      // sending the user to /dashboard.
+      const path = window.location.pathname;
+      router.replace(path === "/" ? "/dashboard" : path);
     }
   }, [status, router]);
 

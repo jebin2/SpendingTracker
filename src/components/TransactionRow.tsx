@@ -3,7 +3,6 @@
 import Link from "next/link";
 import type { Transaction, TransactionStatus } from "@/types";
 import { formatINR } from "@/lib/format/currency";
-import { useAppStore } from "@/store";
 
 export const categoryIcons: Record<string, string> = {
   "Food & Dining": "restaurant", Transport: "directions_car", Shopping: "shopping_bag",
@@ -41,7 +40,6 @@ interface TransactionRowProps {
 }
 
 export function TransactionRow({ tx, subtitleMode = "merchant-payment", hasSuggestions, onSuggestionsClick }: TransactionRowProps) {
-  const isOnline = useAppStore((s) => s.isOnline);
   const isInFlight = tx.status === "queued" || tx.status === "processing";
   const isFailed = tx.status === "failed";
 
@@ -55,14 +53,9 @@ export function TransactionRow({ tx, subtitleMode = "merchant-payment", hasSugge
     ? `${tx.category}${tx.date ? ` · ${tx.date}` : ""}`
     : [tx.merchant !== "Unknown" ? tx.merchant : null, tx.payment_method].filter(Boolean).join(" · ");
 
-  const href = `/transactions/${tx.id}`;
-
   return (
     <Link
-      href={href}
-      // Offline: RSC client-nav fails silently. Force a full-page navigation
-      // so the SW intercepts it as a "document" request and serves the "/" shell.
-      onClick={!isOnline ? (e) => { e.preventDefault(); window.location.href = href; } : undefined}
+      href={`/transactions/${tx.id}`}
       className="flex items-center gap-4 p-4 rounded-2xl"
       style={{
         background: isInFlight
