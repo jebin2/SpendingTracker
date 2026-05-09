@@ -15,13 +15,15 @@ const serwist = new Serwist({
   skipWaiting: true,
   clientsClaim: true,
   runtimeCaching: [
-    // Cache the session endpoint so useSession() works offline (7-day TTL)
+    // Cache the session endpoint so useSession() works offline.
+    // No networkTimeoutSeconds — always wait for the network when online,
+    // even through Vercel cold starts (which can take 5–8s). The cache is
+    // only served when the fetch actually fails (i.e. truly offline).
     {
       matcher: /^https?:\/\/[^/]+\/api\/auth\/session/,
       handler: "NetworkFirst",
       options: {
         cacheName: "auth-session",
-        networkTimeoutSeconds: 3,
         expiration: { maxEntries: 1, maxAgeSeconds: 604800 },
         cacheableResponse: { statuses: [200] },
       },
