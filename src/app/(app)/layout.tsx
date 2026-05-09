@@ -6,9 +6,12 @@ import { useEffect, useRef } from "react";
 import { TopNav } from "@/components/layout/TopNav";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { FAB } from "@/components/layout/FAB";
+import { PullToRefresh } from "@/components/layout/PullToRefresh";
 import { SyncProvider } from "@/providers/SyncProvider";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useAppStore } from "@/store";
+import { pullTransactions } from "@/lib/offline";
+import { useCallback } from "react";
 
 // Module-level guard — prevents double-wrapping fetch in React StrictMode dev
 let fetchIntercepted = false;
@@ -88,6 +91,36 @@ function AppShell({
 }) {
   const isOnline = useOnlineStatus();
   const pendingCount = useAppStore((s) => s.pendingCount);
+  const setTransactions = useAppStore((s) => s.setTransactions);
+
+  const handleRefresh = useCallback(async () => {
+    // 1. Check for new service worker (gets latest JS/HTML/CSS)
+    if ("serviceWorker" in navigator) {
+      try {
+        const reg = await navigator.serviceWorker.getRegistration();
+        if (reg) {
+          await reg.update();
+          // If a new SW is already waiting, activate it and reload
+          if (reg.waiting) {
+            reg.waiting.postMessage({ type: "SKIP_WAITING" });
+            navigator.serviceWorker.addEventListener("controllerchange", () => {
+              window.location.reload();
+            }, { once: true });
+            return;
+          }
+        }
+      } catch {
+        // SW not available — continue
+      }
+    }
+    // 2. Pull latest transaction data
+    try {
+      const txs = await pullTransactions();
+      setTransactions(txs);
+    } catch {
+      // Network unavailable — silently ignore
+    }
+  }, [setTransactions]);
 
   return (
     <div style={{ minHeight: "100dvh", background: "var(--color-background)" }}>
@@ -126,9 +159,11 @@ function AppShell({
         - Offline desktop: pt-24  (64px TopNav + ~32px banner)
       */}
       {/* Mobile: pt-8 only when banner is visible (offline/pending); desktop always pt-24 for TopNav+banner */}
-      <main style={{ paddingBottom: 96 }} className={`${!isOnline || pendingCount > 0 ? "pt-8" : ""} md:pt-24`}>
-        {children}
-      </main>
+      <PullToRefresh onRefresh={handleRefresh}>
+        <main style={{ paddingBottom: 96 }} className={`${!isOnline || pendingCount > 0 ? "pt-8" : ""} md:pt-24`}>
+          {children}
+        </main>
+      </PullToRefresh>
 
       <BottomNav />
       <FAB />
