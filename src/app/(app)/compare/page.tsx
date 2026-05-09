@@ -1,11 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ItemPriceComparison } from "@/app/api/compare/items/route";
-
-function formatINR(n: number) {
-  return "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
-}
+import type { ItemPriceComparison } from "@/types";
+import { formatINR } from "@/lib/format/currency";
 
 export default function ComparePage() {
   const [comparisons, setComparisons] = useState<ItemPriceComparison[]>([]);

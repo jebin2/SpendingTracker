@@ -1,5 +1,6 @@
 import { generateWithImage } from "./client";
 import type { ParsedReceipt } from "@/types";
+import { todayISO } from "@/lib/date/iso";
 
 const SYSTEM_PROMPT = `You are a receipt parser for an Indian spending tracker. Extract all line items from receipt images.
 
@@ -40,7 +41,7 @@ export async function parseReceiptImage(
 ): Promise<ParsedReceipt> {
   const userContext = [
     userRegion ? `User is in ${userRegion}.` : "",
-    todayDate ? `Today's date is ${todayDate}.` : `Today's date is ${new Date().toISOString().split("T")[0]}.`,
+    todayDate ? `Today's date is ${todayDate}.` : `Today's date is ${todayISO()}.`,
   ].filter(Boolean).join(" ");
 
   const raw = await generateWithImage(

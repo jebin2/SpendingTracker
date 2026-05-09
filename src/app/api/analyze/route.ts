@@ -8,32 +8,9 @@ import {
   getAnalysisFromDrive,
 } from "@/lib/sheets";
 import { analyzeSpending } from "@/lib/ai/analyze";
+import { getPeriodRange } from "@/lib/date/periods";
 
 const ANALYSIS_CELL_LIMIT = 40000;
-
-function getDateRange(period: string): { from: string; to: string; label: string } {
-  const now = new Date();
-  const to = now.toISOString().split("T")[0];
-  if (period === "week") {
-    return {
-      from: new Date(Date.now() - 7 * 86400000).toISOString().split("T")[0],
-      to,
-      label: "Last 7 days",
-    };
-  }
-  if (period === "year") {
-    return {
-      from: new Date(now.getFullYear(), 0, 1).toISOString().split("T")[0],
-      to,
-      label: `Year ${now.getFullYear()}`,
-    };
-  }
-  return {
-    from: new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0],
-    to,
-    label: now.toLocaleString("en-IN", { month: "long", year: "numeric" }),
-  };
-}
 
 // Background analysis — runs after response is returned
 async function runAnalysis(
@@ -112,7 +89,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { period = "month", region, lifestyle_tags, force_refresh } = await req.json();
-  const { from, to, label } = getDateRange(period);
+  const { from, to, label } = getPeriodRange(period);
 
   // Already generating — don't start a second run
   const current = await getAnalysisCache(session.access_token, session.sheet_id, period, Infinity);

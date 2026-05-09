@@ -1,5 +1,6 @@
 import { generateText } from "./client";
 import type { ParsedTransaction } from "@/types";
+import { todayISO } from "@/lib/date/iso";
 
 const SYSTEM_PROMPT = `You are a transaction parser for an Indian spending tracker. Extract spending details from SMS or email text.
 
@@ -34,7 +35,7 @@ export async function parseTransactionText(
 ): Promise<ParsedTransaction> {
   const userContext = [
     userRegion ? `User is in ${userRegion}.` : "",
-    todayDate ? `Today's date is ${todayDate}.` : `Today's date is ${new Date().toISOString().split("T")[0]}.`,
+    todayDate ? `Today's date is ${todayDate}.` : `Today's date is ${todayISO()}.`,
   ].filter(Boolean).join(" ");
 
   const raw = await generateText(

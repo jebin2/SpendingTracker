@@ -3,6 +3,7 @@ import { jwtVerify } from "jose";
 import { appendTransaction, setMetaValue } from "@/lib/sheets";
 import { parseTransactionText } from "@/lib/ai/parse-text";
 import type { Transaction } from "@/types";
+import { todayISO } from "@/lib/date/iso";
 
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET ?? "change-me");
 
@@ -31,8 +32,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Server not configured for shortcut auth" }, { status: 500 });
   }
 
-  const today = new Date().toISOString().split("T")[0];
-  const parsed = await parseTransactionText(text, payload.region, today);
+  const parsed = await parseTransactionText(text, payload.region, todayISO());
 
   const tx: Transaction = {
     id: crypto.randomUUID(),

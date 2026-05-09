@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import type { Transaction, TransactionStatus } from "@/types";
+import { formatINR } from "@/lib/format/currency";
 
 export const categoryIcons: Record<string, string> = {
   "Food & Dining": "restaurant", Transport: "directions_car", Shopping: "shopping_bag",
@@ -9,9 +10,7 @@ export const categoryIcons: Record<string, string> = {
   Education: "school", "Personal Care": "spa", "Gifts & Donations": "card_giftcard", Others: "category",
 };
 
-export function formatINR(n: number) {
-  return "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
-}
+export { formatINR };
 
 function StatusBadge({ status }: { status: TransactionStatus }) {
   if (status === "done" || !status) return null;

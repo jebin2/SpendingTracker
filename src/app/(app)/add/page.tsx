@@ -7,10 +7,8 @@ import { CATEGORIES, PAYMENT_METHODS } from "@/lib/constants";
 import { useOfflineFetch } from "@/hooks/useOfflineFetch";
 import { saveLocalTransaction } from "@/lib/offline";
 import { useAppStore } from "@/store";
-
-function formatINR(n: number) {
-  return n === 0 ? "0" : n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
-}
+import { formatINR } from "@/lib/format/currency";
+import { todayISO } from "@/lib/date/iso";
 
 export default function AddPage() {
   const router = useRouter();
@@ -20,7 +18,7 @@ export default function AddPage() {
   const [merchant, setMerchant] = useState("");
   const [category, setCategory] = useState("Food & Dining");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("UPI");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(todayISO());
   const [time, setTime] = useState(new Date().toTimeString().slice(0, 5));
   const [notes, setNotes] = useState("");
   const [saving, setSaving] = useState(false);
@@ -108,7 +106,7 @@ export default function AddPage() {
         <p style={{ fontSize: 13, color: "var(--color-outline)", fontWeight: 500, letterSpacing: "0.05em", textTransform: "uppercase" }}>Amount (₹)</p>
         <div className={`flex items-baseline gap-2 mt-2 px-6 py-2 rounded-2xl transition-all ${submitted && (!amount || parseFloat(amount) <= 0) ? "ring-2 ring-red-500" : ""}`}>
           <span style={{ fontSize: 48, fontWeight: 700, color: displayAmount > 0 ? "var(--color-on-background)" : "var(--color-outline-variant)" }}>
-            ₹{displayAmount > 0 ? formatINR(displayAmount) : "0"}
+            {displayAmount > 0 ? formatINR(displayAmount) : "₹0"}
           </span>
         </div>
         {error && <p style={{ fontSize: 13, color: "var(--color-error)" }} className="mt-2">{error}</p>}

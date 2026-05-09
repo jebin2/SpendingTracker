@@ -1,5 +1,6 @@
 import { google } from "googleapis";
 import { getSheetsClient } from "./client";
+import type { SuggestionField, SuggestionSource, SuggestionStatus } from "@/types";
 
 // ── Item Suggestions ──────────────────────────────────────────────────────────
 // Schema: key | field | current_val | suggested | source | status | updated_at
@@ -14,10 +15,6 @@ import { getSheetsClient } from "./client";
 //                         accepting updates only that transaction
 // status = pending | accepted | rejected
 // updated_at = ISO timestamp of last status change
-
-export type SuggestionStatus = "pending" | "processing" | "accepted" | "rejected";
-export type SuggestionField = "item_name" | "quantity" | "merchant";
-export type SuggestionSource = "normalize" | "notes";
 
 export interface ItemSuggestion {
   key: string;

@@ -6,10 +6,7 @@ import { useProfile } from "@/hooks/useProfile";
 import { usePoller } from "@/hooks/usePoller";
 import { Spinner, GeneratingSpinner, FailedState } from "./AnalysisStates";
 import type { AsyncStatus } from "./AnalysisStates";
-
-function formatINR(n: number) {
-  return "₹" + n.toLocaleString("en-IN", { maximumFractionDigits: 0 });
-}
+import { formatINR } from "@/lib/format/currency";
 
 export function InsightsTab({ period }: { period: string }) {
   const { profile } = useProfile();

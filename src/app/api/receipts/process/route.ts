@@ -9,6 +9,7 @@ import {
 import { parseReceiptImage } from "@/lib/ai/parse-image";
 import { apiError } from "@/lib/api-error";
 import type { Transaction } from "@/types";
+import { todayISO } from "@/lib/date/iso";
 
 export const maxDuration = 300;
 
@@ -47,8 +48,7 @@ export async function POST(req: NextRequest) {
       ? (mimeType as ValidMime)
       : "image/jpeg";
 
-    const today = new Date().toISOString().split("T")[0];
-    const receipt = await parseReceiptImage(buffer.toString("base64"), claudeMime, region, today);
+    const receipt = await parseReceiptImage(buffer.toString("base64"), claudeMime, region, todayISO());
 
     // receipt_id groups all items from this scan together
     const receiptId = txId; // reuse the placeholder's txId as the receipt group id

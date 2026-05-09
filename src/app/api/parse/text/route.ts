@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { parseTransactionText } from "@/lib/ai/parse-text";
 import { apiError } from "@/lib/api-error";
+import { todayISO } from "@/lib/date/iso";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -13,8 +14,7 @@ export async function POST(req: NextRequest) {
   if (!text) return NextResponse.json({ error: "text is required" }, { status: 400 });
 
   try {
-    const today = new Date().toISOString().split("T")[0];
-    const extracted = await parseTransactionText(text, region, today);
+    const extracted = await parseTransactionText(text, region, todayISO());
     return NextResponse.json({ extracted, confidence: extracted.confidence });
   } catch (err) {
     return apiError("Parse text error", err);

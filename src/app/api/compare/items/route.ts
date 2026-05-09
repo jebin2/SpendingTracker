@@ -2,21 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { getTransactions, getAnalysisCache, upsertAnalysisCacheRow } from "@/lib/sheets";
 import { normalizeItemNames } from "@/lib/ai/normalize-items";
-
-export interface ItemPriceEntry {
-  merchant: string;
-  avgPrice: number;
-  minPrice: number;
-  maxPrice: number;
-  count: number;
-  lastDate: string;
-  notes?: string;
-}
-
-export interface ItemPriceComparison {
-  canonical: string;
-  entries: ItemPriceEntry[];  // sorted cheapest first
-}
+import type { ItemPriceComparison } from "@/types";
 
 // Fingerprint = sorted unique names joined — cache key changes when new items appear
 function fingerprint(names: string[]): string {

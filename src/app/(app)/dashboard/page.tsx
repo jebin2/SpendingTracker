@@ -4,29 +4,12 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useProfile } from "@/hooks/useProfile";
-import { TransactionRow, formatINR, categoryIcons } from "@/components/TransactionRow";
+import { TransactionRow, formatINR } from "@/components/TransactionRow";
 import { useTransactions } from "@/hooks/useTransactions";
-
-type Period = "week" | "month" | "year";
-
-function getDateRange(period: Period): { from: string; to: string } {
-  const now = new Date();
-  const to = now.toISOString().split("T")[0];
-  let from: Date;
-  if (period === "week") {
-    from = new Date(now); from.setDate(now.getDate() - 7);
-  } else if (period === "month") {
-    from = new Date(now.getFullYear(), now.getMonth(), 1);
-  } else {
-    from = new Date(now.getFullYear(), 0, 1);
-  }
-  return { from: from.toISOString().split("T")[0], to };
-}
+import { getPeriodRange, type Period } from "@/lib/date/periods";
 
 export default function DashboardPage() {
   const { data: session } = useSession();
-  const { profile } = useProfile();
   const router = useRouter();
   const { transactions, refresh } = useTransactions();
   const [loading, setLoading] = useState(true);
@@ -43,7 +26,7 @@ export default function DashboardPage() {
     refresh().finally(() => setLoading(false));
   }, [session, router, refresh]);
 
-  const { from, to } = getDateRange(period);
+  const { from, to } = getPeriodRange(period);
   const filtered = transactions.filter(
     (t) => t.date >= from && t.date <= to
   );

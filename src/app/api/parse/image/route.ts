@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { parseReceiptImage } from "@/lib/ai/parse-image";
 import { apiError } from "@/lib/api-error";
+import { todayISO } from "@/lib/date/iso";
 
 export async function POST(req: NextRequest) {
   const session = await auth();
@@ -22,10 +23,8 @@ export async function POST(req: NextRequest) {
   }
 
   const base64 = Buffer.from(await image.arrayBuffer()).toString("base64");
-  const today = new Date().toISOString().split("T")[0];
-
   try {
-    const extracted = await parseReceiptImage(base64, mediaType, region ?? undefined, today);
+    const extracted = await parseReceiptImage(base64, mediaType, region ?? undefined, todayISO());
     return NextResponse.json({ extracted, confidence: extracted.confidence });
   } catch (err) {
     return apiError("Parse image error", err);

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { Transaction } from "@/types";
+import { todayISO } from "@/lib/date/iso";
 
 export default function DataSettingsPage() {
   const router = useRouter();
@@ -28,7 +29,7 @@ export default function DataSettingsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `SpendingTracker-${new Date().toISOString().split("T")[0]}.csv`;
+      a.download = `SpendingTracker-${todayISO()}.csv`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {

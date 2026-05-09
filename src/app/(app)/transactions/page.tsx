@@ -3,19 +3,19 @@
 import { useEffect, useState, useCallback, useRef, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import type { Transaction } from "@/types";
-import type { PendingSuggestion } from "@/app/api/items/suggestions/route";
+import type { PendingSuggestion, Transaction } from "@/types";
 import { TransactionRow, formatINR } from "@/components/TransactionRow";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-
-function groupByDate(txs: Transaction[]): Record<string, Transaction[]> {
-  const groups: Record<string, Transaction[]> = {};
-  for (const tx of txs) {
-    (groups[tx.date] ??= []).push(tx);
-  }
-  return groups;
-}
+import {
+  filterAndSortTransactions,
+  formatTransactionDateLabel,
+  getDuplicateGroups,
+  getTransactionCategories,
+  groupTransactionsByDate,
+  type DatePreset,
+  type DuplicateGroup,
+} from "@/features/transactions/utils/list";
 
 function TransactionsContent() {
   const searchParams = useSearchParams();
@@ -29,8 +29,8 @@ function TransactionsContent() {
   const [showDupsOnly, setShowDupsOnly] = useState(searchParams.get("duplicates_only") === "true");
   const [dupChecking, setDupChecking] = useState(false);
   const [dupError, setDupError] = useState<string | null>(null);
-  const [activeDupGroup, setActiveDupGroup] = useState<{ original: Transaction; duplicates: Transaction[] } | null>(null);
-  const [datePreset, setDatePreset] = useState<"week" | "month" | "year" | "custom" | "">("");
+  const [activeDupGroup, setActiveDupGroup] = useState<DuplicateGroup | null>(null);
+  const [datePreset, setDatePreset] = useState<DatePreset>("");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const region = typeof window !== "undefined" ? localStorage.getItem("region") ?? "" : "";
@@ -147,48 +147,17 @@ function TransactionsContent() {
     };
   }, [transactions, loadData, triggerProcessing, isOnline]);
 
-  const categories = [...new Set(transactions.map((t) => t.category).filter((c) => c && c !== "Others"))].sort();
-
-  const today = new Date();
-  const dateFrom = (() => {
-    if (datePreset === "week") { const d = new Date(today); d.setDate(d.getDate() - d.getDay()); return d.toISOString().split("T")[0]; }
-    if (datePreset === "month") return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
-    if (datePreset === "year") return `${today.getFullYear()}-01-01`;
-    if (datePreset === "custom") return customFrom;
-    return "";
-  })();
-  const dateTo = datePreset === "custom" ? customTo : datePreset ? today.toISOString().split("T")[0] : "";
-
-  const filtered = transactions
-    .filter((t) => !showDupsOnly || t.is_duplicate)
-    .filter((t) => !filterCat || t.category === filterCat)
-    .filter((t) => !dateFrom || t.date >= dateFrom)
-    .filter((t) => !dateTo || t.date <= dateTo)
-    .filter((t) =>
-      !search ||
-      t.item_name?.toLowerCase().includes(search.toLowerCase()) ||
-      t.merchant.toLowerCase().includes(search.toLowerCase()) ||
-      t.category?.toLowerCase().includes(search.toLowerCase()) ||
-      t.notes?.toLowerCase().includes(search.toLowerCase())
-    )
-    .sort((a, b) => {
-      // Always put in-flight entries at the top
-      const aFlight = a.status === "queued" || a.status === "processing" ? 1 : 0;
-      const bFlight = b.status === "queued" || b.status === "processing" ? 1 : 0;
-      if (aFlight !== bFlight) return bFlight - aFlight;
-      return b.date.localeCompare(a.date) || b.time.localeCompare(a.time);
-    });
-
-  const groups = groupByDate(filtered);
+  const categories = getTransactionCategories(transactions);
+  const filtered = filterAndSortTransactions(transactions, {
+    search,
+    category: filterCat,
+    showDuplicatesOnly: showDupsOnly,
+    datePreset,
+    customFrom,
+    customTo,
+  });
+  const groups = groupTransactionsByDate(filtered);
   const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
-
-  function formatDate(d: string) {
-    const today = new Date().toISOString().split("T")[0];
-    const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
-    if (d === today) return "Today";
-    if (d === yesterday) return "Yesterday";
-    return new Date(d).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
-  }
 
   async function triggerDupDetect() {
     setDupChecking(true);
@@ -224,7 +193,7 @@ function TransactionsContent() {
     loadData();
   }
 
-  async function dismissGroup(group: { original: Transaction; duplicates: Transaction[] }) {
+  async function dismissGroup(group: DuplicateGroup) {
     await Promise.all(
       group.duplicates.map((t) =>
         fetch(`/api/transactions/${t.id}`, {
@@ -325,16 +294,7 @@ function TransactionsContent() {
           ))}
         </div>
       ) : showDupsOnly ? (() => {
-        // Build duplicate groups: original tx → list of its duplicates
-        const dupTxs = transactions.filter((t) => t.is_duplicate && t.duplicate_ref);
-        const groupMap: Record<string, Transaction[]> = {};
-        for (const t of dupTxs) {
-          (groupMap[t.duplicate_ref!] ??= []).push(t);
-        }
-        const dupGroups = Object.entries(groupMap).map(([origId, dups]) => ({
-          original: transactions.find((t) => t.id === origId),
-          duplicates: dups,
-        })).filter((g) => g.original);
+        const dupGroups = getDuplicateGroups(transactions);
 
         if (dupChecking) return (
           <div className="flex flex-col items-center py-16 gap-3">
@@ -366,15 +326,15 @@ function TransactionsContent() {
         return (
           <div className="flex flex-col gap-2">
             {dupGroups.map(({ original: orig, duplicates }) => (
-              <button key={orig!.id} onClick={() => setActiveDupGroup({ original: orig!, duplicates })}
+              <button key={orig.id} onClick={() => setActiveDupGroup({ original: orig, duplicates })}
                 className="flex items-center gap-4 p-4 rounded-2xl text-left w-full"
                 style={{ background: "#fff8f0", border: "1px solid #ffe0b2" }}>
                 <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0" style={{ background: "#fff3e0" }}>
                   <span className="material-symbols-outlined" style={{ color: "#e65100", fontSize: 20, fontVariationSettings: "'FILL' 1" }}>content_copy</span>
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="truncate font-medium" style={{ color: "var(--color-on-surface)" }}>{orig!.item_name || orig!.merchant}</p>
-                  <p style={{ fontSize: 13, color: "var(--color-on-surface-variant)" }}>{orig!.date} · {formatINR(orig!.amount)}</p>
+                  <p className="truncate font-medium" style={{ color: "var(--color-on-surface)" }}>{orig.item_name || orig.merchant}</p>
+                  <p style={{ fontSize: 13, color: "var(--color-on-surface-variant)" }}>{orig.date} · {formatINR(orig.amount)}</p>
                 </div>
                 <div className="flex items-center gap-1 px-2.5 py-1 rounded-full" style={{ background: "#ffcc80" }}>
                   <span style={{ fontSize: 13, fontWeight: 700, color: "#e65100" }}>×{duplicates.length + 1}</span>
@@ -399,7 +359,7 @@ function TransactionsContent() {
           {sortedDates.map((date) => (
             <div key={date}>
               <div className="flex justify-between items-center mb-2 px-1">
-                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--color-outline)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{formatDate(date)}</p>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--color-outline)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{formatTransactionDateLabel(date)}</p>
                 <p style={{ fontSize: 13, color: "var(--color-outline)" }}>
                   {formatINR(groups[date].filter((t) => t.status !== "queued" && t.status !== "processing").reduce((s, t) => s + t.amount, 0))}
                 </p>

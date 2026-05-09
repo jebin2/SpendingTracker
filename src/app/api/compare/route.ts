@@ -8,19 +8,12 @@ import {
   storeAnalysisInDrive,
 } from "@/lib/sheets";
 import { compareMerchants } from "@/lib/ai/compare";
+import { getPeriodRange } from "@/lib/date/periods";
 
 const COMPARE_CELL_LIMIT = 40000;
 
 function compareKey(merchants: string[], period: string) {
   return `compare_${[...merchants].sort().join("|")}_${period}`;
-}
-
-function getDateRange(period: string): { from: string; to: string } {
-  const now = new Date();
-  const to = now.toISOString().split("T")[0];
-  if (period === "week") return { from: new Date(Date.now() - 7 * 86400000).toISOString().split("T")[0], to };
-  if (period === "year") return { from: new Date(now.getFullYear(), 0, 1).toISOString().split("T")[0], to };
-  return { from: new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0], to };
 }
 
 async function runComparison(
@@ -32,7 +25,7 @@ async function runComparison(
 ) {
   const key = compareKey(merchants, period);
   try {
-    const { from, to } = getDateRange(period);
+    const { from, to } = getPeriodRange(period);
     const allTx = await getTransactions(accessToken, sheetId);
     const filtered = allTx.filter(
       (t) => t.date >= from && t.date <= to

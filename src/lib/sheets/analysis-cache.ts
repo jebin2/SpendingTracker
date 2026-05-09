@@ -2,6 +2,7 @@ import { Readable } from "stream";
 import { google } from "googleapis";
 import { getSheetsClient, getDriveClient } from "./client";
 import { getOrCreateReceiptsFolder } from "./drive";
+import { todayISO } from "@/lib/date/iso";
 
 // ── Analysis Cache ────────────────────────────────────────────────────────────
 // Columns: A=id B=period C=period_type D=summary_json E=generated_at F=status G=drive_file_id
@@ -109,7 +110,7 @@ export async function storeAnalysisInDrive(
 ): Promise<string> {
   const drive = getDriveClient(accessToken);
   const folderId = await getOrCreateReceiptsFolder(accessToken, sheetId);
-  const filename = `analysis_${period}_${new Date().toISOString().split("T")[0]}.json`;
+  const filename = `analysis_${period}_${todayISO()}.json`;
   const file = await drive.files.create({
     requestBody: { name: filename, parents: [folderId] },
     media: { mimeType: "application/json", body: Readable.from(Buffer.from(jsonContent)) },

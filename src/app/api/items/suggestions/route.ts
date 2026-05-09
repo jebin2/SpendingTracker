@@ -6,17 +6,7 @@ import {
   getTransactions,
   updateTransactionField,
 } from "@/lib/sheets";
-import type { SuggestionField } from "@/lib/sheets";
-
-export interface PendingSuggestion {
-  key: string;
-  field: SuggestionField;
-  current_val: string;
-  suggested: string;
-  source: "normalize" | "notes";
-  // For normalize suggestions, tx_ids affected
-  tx_ids?: string[];
-}
+import type { PendingSuggestion, SuggestionField } from "@/types";
 
 // GET — return all actionable pending suggestions (skip same-value sentinels)
 export async function GET() {
