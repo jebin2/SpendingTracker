@@ -26,6 +26,7 @@ function TransactionsContent() {
   const [filterCat, setFilterCat] = useState("");
   const [showDupsOnly, setShowDupsOnly] = useState(searchParams.get("duplicates_only") === "true");
   const [dupChecking, setDupChecking] = useState(false);
+  const [dupError, setDupError] = useState<string | null>(null);
   const [activeDupGroup, setActiveDupGroup] = useState<{ original: Transaction; duplicates: Transaction[] } | null>(null);
   const [datePreset, setDatePreset] = useState<"week" | "month" | "year" | "custom" | "">("");
   const [customFrom, setCustomFrom] = useState("");
@@ -189,16 +190,22 @@ function TransactionsContent() {
 
   async function triggerDupDetect() {
     setDupChecking(true);
-    const res = await fetch("/api/duplicates/detect", { method: "POST" });
-    const data = await res.json();
-    if (data.started) {
-      // Poll until detection completes (meta date changes)
-      const poll = setInterval(async () => {
-        const txs = await loadData();
-        if (txs) { clearInterval(poll); setDupChecking(false); }
-      }, 3000);
-      setTimeout(() => { clearInterval(poll); setDupChecking(false); }, 30000);
-    } else {
+    setDupError(null);
+    try {
+      const res = await fetch("/api/duplicates/detect", { method: "POST" });
+      const data = await res.json();
+      if (!res.ok) {
+        setDupError(
+          data.error === "ai_unavailable"
+            ? "AI service unavailable — check your API key in settings."
+            : "Duplicate check failed. Please try again."
+        );
+      } else {
+        await loadData();
+      }
+    } catch {
+      setDupError("Network error — please try again.");
+    } finally {
       setDupChecking(false);
     }
   }
@@ -331,6 +338,20 @@ function TransactionsContent() {
           <div className="flex flex-col items-center py-16 gap-3">
             <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#ffcc80", borderTopColor: "#e65100" }} />
             <p style={{ fontSize: 14, color: "var(--color-on-surface-variant)" }}>AI is checking for duplicates…</p>
+          </div>
+        );
+        if (dupError) return (
+          <div className="flex flex-col items-center py-16 gap-4 text-center px-4">
+            <div className="w-16 h-16 rounded-3xl flex items-center justify-center" style={{ background: "var(--color-error-container)" }}>
+              <span className="material-symbols-outlined" style={{ color: "var(--color-error)", fontSize: 28 }}>error</span>
+            </div>
+            <p style={{ fontSize: 16, fontWeight: 600, color: "var(--color-on-surface)" }}>Check failed</p>
+            <p style={{ fontSize: 14, color: "var(--color-on-surface-variant)" }}>{dupError}</p>
+            <button onClick={triggerDupDetect}
+              className="px-5 py-2.5 rounded-2xl font-semibold"
+              style={{ background: "var(--color-primary)", color: "#fff", fontSize: 14, cursor: "pointer" }}>
+              Retry
+            </button>
           </div>
         );
         if (dupGroups.length === 0) return (

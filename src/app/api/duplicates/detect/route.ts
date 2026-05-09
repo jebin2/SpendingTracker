@@ -3,36 +3,33 @@ import { auth } from "@/lib/auth";
 import { getTransactions, updateTransactionField, getMetaValues, setMetaValue } from "@/lib/sheets";
 import { findDuplicates } from "@/lib/ai/dedup";
 
-async function runDetection(accessToken: string, sheetId: string) {
-  try {
-    const transactions = await getTransactions(accessToken, sheetId);
+const RUN_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
 
-    // Reset previous duplicate flags before re-running
-    const previousDups = transactions.filter((t) => t.is_duplicate);
-    await Promise.all(
-      previousDups.map((t) =>
-        updateTransactionField(accessToken, sheetId, t.id, { is_duplicate: false, duplicate_ref: undefined })
+async function runDetection(accessToken: string, sheetId: string): Promise<void> {
+  const transactions = await getTransactions(accessToken, sheetId);
+
+  // Reset previous duplicate flags before re-running
+  const previousDups = transactions.filter((t) => t.is_duplicate);
+  await Promise.all(
+    previousDups.map((t) =>
+      updateTransactionField(accessToken, sheetId, t.id, { is_duplicate: false, duplicate_ref: undefined })
+    )
+  );
+
+  const groups = await findDuplicates(transactions);
+
+  await Promise.all(
+    groups.flatMap((g) =>
+      g.duplicate_ids.map((dupId) =>
+        updateTransactionField(accessToken, sheetId, dupId, {
+          is_duplicate: true,
+          duplicate_ref: g.original_id,
+        })
       )
-    );
+    )
+  );
 
-    const groups = await findDuplicates(transactions);
-
-    // Mark duplicates in sheet
-    await Promise.all(
-      groups.flatMap((g) =>
-        g.duplicate_ids.map((dupId) =>
-          updateTransactionField(accessToken, sheetId, dupId, {
-            is_duplicate: true,
-            duplicate_ref: g.original_id,
-          })
-        )
-      )
-    );
-
-    await setMetaValue(accessToken, sheetId, "last_dedup_checked_at", new Date().toISOString());
-  } catch (err) {
-    console.error("Duplicate detection error:", err);
-  }
+  await setMetaValue(accessToken, sheetId, "last_dedup_checked_at", new Date().toISOString());
 }
 
 export async function POST() {
@@ -42,15 +39,22 @@ export async function POST() {
   }
 
   const meta = await getMetaValues(session.access_token, session.sheet_id);
-  const lastRun = meta.last_dedup_checked_at;
-  const today = new Date().toISOString().split("T")[0];
+  const lastRun = meta.last_dedup_checked_at ? new Date(meta.last_dedup_checked_at).getTime() : 0;
 
-  // Run at most once per day
-  if (lastRun && lastRun.startsWith(today)) {
+  if (Date.now() - lastRun < RUN_INTERVAL_MS) {
     return NextResponse.json({ skipped: true });
   }
 
-  // Fire background — return immediately
-  runDetection(session.access_token, session.sheet_id);
-  return NextResponse.json({ started: true });
+  try {
+    await runDetection(session.access_token, session.sheet_id);
+    return NextResponse.json({ done: true });
+  } catch (err: unknown) {
+    console.error("Duplicate detection error:", err);
+    const msg = err instanceof Error ? err.message : String(err);
+    const isAiError = msg.includes("API key") || msg.includes("API Key") || msg.includes("quota") || msg.includes("429") || msg.includes("503");
+    return NextResponse.json(
+      { error: isAiError ? "ai_unavailable" : "detection_failed" },
+      { status: 500 }
+    );
+  }
 }
