@@ -33,12 +33,17 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Sequential init: local first (instant) → then API (fresh)
     (async () => {
-      const localTxs = await getLocalTransactions();
-      if (localTxs.length > 0) setTransactions(localTxs);
+      try {
+        const localTxs = await getLocalTransactions();
+        if (localTxs.length > 0) setTransactions(localTxs);
 
-      // Restore pending count from last session
-      const count = await pendingCount();
-      if (count > 0) setPendingCount(count);
+        // Restore pending count from last session
+        const count = await pendingCount();
+        if (count > 0) setPendingCount(count);
+      } catch (err) {
+        console.error("SyncProvider: failed to load local data:", err);
+        // IndexedDB unavailable — continue with empty state, sync will populate
+      }
 
       setOnline(navigator.onLine);
       await sync();
@@ -48,13 +53,23 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
     const handleOnline = async () => {
       setOnline(true);
-      const result = await flushQueue();
-      if (result.authExpired) {
-        setPendingCount(0); // Queue abandoned — layout interceptor will sign out
-        return;
+
+      // Loop until queue is fully drained — new mutations may arrive during flush
+      // (e.g. user edits a tx while a POST is still flushing, safeFetch queues it).
+      // Break if no progress to prevent infinite loop on persistent errors.
+      let lastCount = -1;
+      while (true) {
+        const result = await flushQueue();
+        if (result.authExpired) {
+          setPendingCount(0);
+          return;
+        }
+        const count = await pendingCount();
+        setPendingCount(count);
+        if (count === 0 || count === lastCount) break; // drained or no progress
+        lastCount = count;
       }
-      const count = await pendingCount();
-      setPendingCount(count);
+
       await sync();
     };
 
