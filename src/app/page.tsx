@@ -1,20 +1,19 @@
 "use client";
 
 import { useSession, signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function LandingPage() {
   const { data: session, status } = useSession();
+  const router = useRouter();
 
   useEffect(() => {
     if (status === "authenticated") {
-      // Use window.location (full navigation) instead of router.replace (RSC fetch).
-      // This lets the SW serve the target page from the navigation cache, which
-      // works offline. router.replace triggers an RSC fetch that fails offline.
       const path = window.location.pathname;
-      window.location.replace(path === "/" ? "/dashboard" : path);
+      router.replace(path === "/" ? "/dashboard" : path);
     }
-  }, [status]);
+  }, [status, router]);
 
   if (status === "loading" || session) {
     return (
