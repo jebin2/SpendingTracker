@@ -37,13 +37,17 @@ export async function POST(req: NextRequest) {
 
     await appendTransaction(session.access_token, session.sheet_id, tx);
 
-    const recent = await getTransactions(session.access_token, session.sheet_id, 100);
-    const dedupResult = await checkDuplicate(tx, recent);
+    // AI dedup is best-effort — a failure must not block the save
+    let duplicate = null;
+    try {
+      const recent = await getTransactions(session.access_token, session.sheet_id, 100);
+      const dedupResult = await checkDuplicate(tx, recent);
+      duplicate = dedupResult.is_duplicate && dedupResult.confidence > 0.7 ? dedupResult : null;
+    } catch {
+      // AI unavailable — skip dedup silently
+    }
 
-    return NextResponse.json({
-      transaction: tx,
-      duplicate: dedupResult.is_duplicate && dedupResult.confidence > 0.7 ? dedupResult : null,
-    });
+    return NextResponse.json({ transaction: tx, duplicate });
   } catch (err) {
     return apiError("POST transaction error", err);
   }
