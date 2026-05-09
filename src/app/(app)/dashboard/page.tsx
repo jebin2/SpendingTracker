@@ -14,7 +14,9 @@ export default function DashboardPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const { transactions, refresh } = useTransactions();
-  const [loading, setLoading] = useState(true);
+  // Show skeleton only when store is empty; if we already have data (from
+  // local cache or a previous session) render it immediately and refresh quietly.
+  const [loading, setLoading] = useState(transactions.length === 0);
   const [period, setPeriod] = useState<Period>("month");
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
 

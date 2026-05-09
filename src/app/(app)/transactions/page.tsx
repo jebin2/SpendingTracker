@@ -25,7 +25,9 @@ function TransactionsContent() {
   const [suggestions, setSuggestions] = useState<Record<string, PendingSuggestion[]>>({});
   const [activeSuggTxId, setActiveSuggTxId] = useState<string | null>(null);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { transactions, refresh } = useTransactions();
+  // Show skeleton only when store is empty; existing data renders immediately.
+  const [loading, setLoading] = useState(transactions.length === 0);
   const [search, setSearch] = useState("");
   const [filterCat, setFilterCat] = useState("");
   const [showDupsOnly, setShowDupsOnly] = useState(searchParams.get("duplicates_only") === "true");
@@ -38,8 +40,6 @@ function TransactionsContent() {
   const region = typeof window !== "undefined" ? localStorage.getItem("region") ?? "" : "";
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const processingRef = useRef<Set<string>>(new Set());
-
-  const { transactions, refresh } = useTransactions();
 
   const loadData = useCallback(async () => {
     try {

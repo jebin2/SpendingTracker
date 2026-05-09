@@ -19,81 +19,54 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       const txs = await pullTransactions();
       setTransactions(txs);
     } catch (err) {
-      if (err instanceof Error && err.message === "auth_expired") {
-        return;
-      }
+      if (err instanceof Error && err.message === "auth_expired") return;
     } finally {
       setSyncing(false);
     }
   }
 
+  // Single function used by BOTH app-start (already online) and the online event.
+  // Keeps the logic in one place and eliminates the race between the two paths.
+  async function goOnline() {
+    setOnline(true);
+    let lastCount = -1;
+    while (true) {
+      const result = await flushQueue();
+      if (result.authExpired) { setPendingCount(0); return; }
+      const count = await pendingCount();
+      setPendingCount(count);
+      if (count === 0 || count === lastCount) break;
+      lastCount = count;
+    }
+    await sync();
+  }
+
   useEffect(() => {
-    // Sequential init: local first (instant) → then API (fresh)
     (async () => {
       try {
         const localTxs = await getLocalTransactions();
         if (localTxs.length > 0) setTransactions(localTxs);
 
-        // Restore pending count from last session
         const count = await pendingCount();
         if (count > 0) setPendingCount(count);
       } catch (err) {
         console.error("SyncProvider: failed to load local data:", err);
-        // IndexedDB unavailable — continue with empty state, sync will populate
       }
 
-      setOnline(navigator.onLine);
-
-      // If the app starts while already online with queued ops (e.g. after a
-      // reload, or opened after being offline) flush before syncing — the
-      // "online" event won't fire again since we're already connected.
       if (navigator.onLine) {
-        const queued = await pendingCount();
-        if (queued > 0) {
-          let lastCount = -1;
-          while (true) {
-            const result = await flushQueue();
-            if (result.authExpired) { setPendingCount(0); return; }
-            const remaining = await pendingCount();
-            setPendingCount(remaining);
-            if (remaining === 0 || remaining === lastCount) break;
-            lastCount = remaining;
-          }
-        }
+        await goOnline();
+      } else {
+        setOnline(false);
       }
-
-      await sync();
     })();
 
     const handleOffline = () => setOnline(false);
 
-    const handleOnline = async () => {
-      setOnline(true);
-
-      // Loop until queue is fully drained — new mutations may arrive during flush
-      // (e.g. user edits a tx while a POST is still flushing, safeFetch queues it).
-      // Break if no progress to prevent infinite loop on persistent errors.
-      let lastCount = -1;
-      while (true) {
-        const result = await flushQueue();
-        if (result.authExpired) {
-          setPendingCount(0);
-          return;
-        }
-        const count = await pendingCount();
-        setPendingCount(count);
-        if (count === 0 || count === lastCount) break; // drained or no progress
-        lastCount = count;
-      }
-
-      await sync();
-    };
-
-    window.addEventListener("online", handleOnline);
+    window.addEventListener("online", goOnline);
     window.addEventListener("offline", handleOffline);
 
     return () => {
-      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("online", goOnline);
       window.removeEventListener("offline", handleOffline);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
