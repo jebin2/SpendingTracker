@@ -1,19 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, forwardRef, useImperativeHandle } from "react";
 import type { Transaction } from "@/types";
 import { CATEGORIES, PAYMENT_METHODS } from "@/lib/constants";
 import { useOfflineFetch } from "@/hooks/useOfflineFetch";
 import { patchLocalTransaction } from "@/lib/offline";
 import { useAppStore } from "@/store";
 
-export function EditForm({
-  tx,
-  onSaved,
-}: {
+export interface EditFormHandle {
+  save: () => void;
+}
+
+export const EditForm = forwardRef<EditFormHandle, {
   tx: Transaction;
   onSaved: (updated: Transaction) => void;
-}) {
+}>(function EditForm({
+  tx,
+  onSaved,
+}, ref) {
   const [itemName, setItemName] = useState(tx.item_name || "");
   const [quantity, setQuantity] = useState(tx.quantity || "");
   const [merchant, setMerchant] = useState(tx.merchant === "Processing…" ? "" : tx.merchant);
@@ -26,6 +30,8 @@ export function EditForm({
 
   const { safeFetch } = useOfflineFetch();
   const updateTransaction = useAppStore((s) => s.updateTransaction);
+
+  useImperativeHandle(ref, () => ({ save }));
 
   async function save() {
     if (saving || !itemName.trim() || !amount) return;
@@ -135,4 +141,4 @@ export function EditForm({
       </button>
     </div>
   );
-}
+});

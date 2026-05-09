@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Transaction } from "@/types";
 import { formatINR, categoryIcons } from "@/components/TransactionRow";
-import { EditForm } from "@/components/transactions/EditForm";
+import { EditForm, type EditFormHandle } from "@/components/transactions/EditForm";
 import { ReceiptItemsPopup } from "@/components/transactions/ReceiptItemsPopup";
 import { removeLocalTransaction, enqueueOp, pendingCount } from "@/lib/offline";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
@@ -39,6 +39,7 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
   const isOnline = useOnlineStatus();
   const removeTransaction = useAppStore((s) => s.removeTransaction);
   const { refresh } = useTransactions();
+  const editFormRef = useRef<EditFormHandle | null>(null);
 
   // Always read the latest version from the store so in-flight updates reflect live
   const liveTx = useAppStore((s) => s.transactions.find((t) => t.id === initialTx.id)) ?? initialTx;
@@ -53,6 +54,12 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
   useEffect(() => {
     setTx(liveTx);
   }, [liveTx]);
+
+  // Lock body scroll while sheet is open
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
 
   // Poll API while in-flight and online — refresh updates the store which trickles down
   useEffect(() => {
@@ -126,15 +133,29 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
               style={{ background: "rgba(255,255,255,0.15)" }}>
               <span className="material-symbols-outlined text-white" style={{ fontSize: 20 }}>close</span>
             </button>
-            <h2 style={{ fontSize: 17, fontWeight: 600, color: "#fff" }}>Transaction</h2>
-            {!isInFlight && !isFailed && (
-              <button onClick={() => setView(view === "edit" ? "detail" : "edit")}
-                className="ml-auto w-9 h-9 rounded-full flex items-center justify-center"
+            <h2 style={{ fontSize: 17, fontWeight: 600, color: "#fff", flex: 1 }}>Transaction</h2>
+            {!isInFlight && !isFailed && view === "detail" && (
+              <button onClick={() => setView("edit")}
+                className="w-9 h-9 rounded-full flex items-center justify-center"
                 style={{ background: "rgba(255,255,255,0.15)" }}>
-                <span className="material-symbols-outlined text-white" style={{ fontSize: 20 }}>
-                  {view === "edit" ? "close" : "edit"}
-                </span>
+                <span className="material-symbols-outlined text-white" style={{ fontSize: 20 }}>edit</span>
               </button>
+            )}
+            {!isInFlight && view === "edit" && (
+              <div className="flex gap-2">
+                <button onClick={() => setView("detail")}
+                  className="w-9 h-9 rounded-full flex items-center justify-center"
+                  style={{ background: "rgba(255,255,255,0.15)" }}
+                  title="Cancel">
+                  <span className="material-symbols-outlined text-white" style={{ fontSize: 20 }}>close</span>
+                </button>
+                <button onClick={() => editFormRef.current?.save()}
+                  className="w-9 h-9 rounded-full flex items-center justify-center"
+                  style={{ background: "rgba(255,255,255,0.3)" }}
+                  title="Save">
+                  <span className="material-symbols-outlined text-white" style={{ fontSize: 20 }}>check</span>
+                </button>
+              </div>
             )}
           </div>
           <div className="flex items-center gap-4">
@@ -187,7 +208,7 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
                   </button>
                 </div>
               )}
-              <EditForm tx={tx} onSaved={(updated) => { setTx(updated); setView("detail"); }} />
+              <EditForm ref={editFormRef} tx={tx} onSaved={(updated) => { setTx(updated); setView("detail"); }} />
             </>
           )}
 
