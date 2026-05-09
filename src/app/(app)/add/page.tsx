@@ -94,11 +94,22 @@ export default function AddPage() {
   return (
     <div className="max-w-lg mx-auto flex flex-col min-h-[calc(100dvh-80px)]">
       {/* Mobile header */}
-      <div className="md:hidden sticky top-0 z-30 flex items-center px-5 pt-10 pb-3" style={{ background: "var(--color-background)" }}>
+      <div className="md:hidden sticky top-0 z-30 flex items-center gap-3 px-5 pt-10 pb-3" style={{ background: "var(--color-background)" }}>
         <button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-xl" style={{ background: "var(--color-surface-container)" }}>
           <span className="material-symbols-outlined" style={{ color: "var(--color-on-surface-variant)" }}>arrow_back</span>
         </button>
-        <h1 className="ml-3 font-semibold" style={{ fontSize: 20 }}>Add Expense</h1>
+        <h1 className="flex-1 font-semibold" style={{ fontSize: 20 }}>Add Expense</h1>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="w-9 h-9 flex items-center justify-center rounded-xl"
+          style={{ background: "var(--color-primary)", opacity: saving ? 0.6 : 1 }}
+        >
+          {saving
+            ? <div className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "rgba(255,255,255,0.4)", borderTopColor: "#fff" }} />
+            : <span className="material-symbols-outlined" style={{ color: "#fff", fontSize: 20 }}>check</span>
+          }
+        </button>
       </div>
 
       {/* Amount display */}
@@ -218,10 +229,11 @@ export default function AddPage() {
             </button>
           ))}
         </div>
+        {/* Desktop only — mobile uses the header tick button */}
         <button
           onClick={handleSave}
           disabled={saving}
-          className="w-full py-4 rounded-2xl font-semibold flex items-center justify-center gap-2 transition-opacity"
+          className="hidden md:flex w-full py-4 rounded-2xl font-semibold items-center justify-center gap-2 transition-opacity"
           style={{
             background: "var(--color-primary)",
             color: "var(--color-on-primary)",
