@@ -73,7 +73,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!session) return null;
+  // Show spinner while redirect to "/" is in progress — prevents blank white page
+  if (!session) {
+    return (
+      <div className="flex items-center justify-center min-h-screen" style={{ background: "var(--color-background)" }}>
+        <div className="w-12 h-12 rounded-full border-4 border-t-transparent animate-spin"
+          style={{ borderColor: "var(--color-primary-fixed)", borderTopColor: "var(--color-primary)" }} />
+      </div>
+    );
+  }
 
   return (
     <SyncProvider>

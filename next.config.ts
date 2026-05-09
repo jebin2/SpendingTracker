@@ -36,7 +36,7 @@ export default withPWA({
         options: {
           cacheName: "auth-session",
           networkTimeoutSeconds: 3,
-          expiration: { maxEntries: 1, maxAgeSeconds: 3600 },
+          expiration: { maxEntries: 1, maxAgeSeconds: 604800 }, // 7 days
           cacheableResponse: { statuses: [200] },
         },
       },

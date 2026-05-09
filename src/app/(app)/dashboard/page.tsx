@@ -77,7 +77,7 @@ export default function DashboardPage() {
       <div className="rounded-3xl p-6" style={{ background: "var(--color-primary)", boxShadow: "0 8px 24px rgba(31,16,142,0.25)" }}>
         <p style={{ fontSize: 13, color: "rgba(255,255,255,0.7)", fontWeight: 500 }}>Total Spent</p>
         <p style={{ fontSize: 40, fontWeight: 700, color: "#fff", letterSpacing: "-0.02em" }} className="mt-1">
-          {loading ? "…" : formatINR(totalSpent)}
+          {loading && transactions.length === 0 ? "…" : formatINR(totalSpent)}
         </p>
         <p style={{ fontSize: 13, color: "rgba(255,255,255,0.6)" }} className="mt-2">
           {filtered.length} transaction{filtered.length !== 1 ? "s" : ""}
@@ -131,7 +131,7 @@ export default function DashboardPage() {
           <Link href="/transactions" style={{ fontSize: 14, color: "var(--color-primary)", fontWeight: 500 }}>See all</Link>
         </div>
 
-        {loading ? (
+        {loading && transactions.length === 0 ? (
           <div className="flex flex-col gap-3">
             {[1, 2, 3].map((i) => (
               <div key={i} className="h-16 rounded-2xl animate-pulse" style={{ background: "var(--color-surface-container)" }} />

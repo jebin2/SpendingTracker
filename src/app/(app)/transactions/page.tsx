@@ -289,7 +289,7 @@ function TransactionsContent() {
       </div>
 
       {/* List */}
-      {loading ? (
+      {loading && transactions.length === 0 ? (
         <div className="flex flex-col gap-3">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="h-16 rounded-2xl animate-pulse" style={{ background: "var(--color-surface-container)" }} />
