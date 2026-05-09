@@ -23,5 +23,21 @@ export default withPWA({
   workboxOptions: {
     skipWaiting: true,
     clientsClaim: true,
+    runtimeCaching: [
+      {
+        // Cache all app page HTML with NetworkFirst.
+        // Online → fetches fresh, caches response.
+        // Offline → serves from cache; fallbacks.document kicks in on cache miss.
+        // Excludes /_next/ (static assets pre-cached by SW) and /api/ routes.
+        urlPattern: /^https?:\/\/[^/]+(?!\/_next)(?!\/api).*/,
+        handler: "NetworkFirst",
+        options: {
+          cacheName: "app-pages",
+          networkTimeoutSeconds: 3,
+          expiration: { maxEntries: 128, maxAgeSeconds: 86400 },
+          cacheableResponse: { statuses: [200] },
+        },
+      },
+    ],
   },
 })(nextConfig);
