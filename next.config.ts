@@ -13,7 +13,7 @@ export default withPWA({
   dest: "public",
   cacheOnFrontEndNav: true,
   aggressiveFrontEndNavCaching: true,
-  reloadOnOnline: true,
+  reloadOnOnline: false,
   disable: process.env.NODE_ENV === "development",
   fallbacks: {
     // Serve the pre-cached app shell ("/" HTML) for any offline navigation

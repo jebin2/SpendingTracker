@@ -43,6 +43,25 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       }
 
       setOnline(navigator.onLine);
+
+      // If the app starts while already online with queued ops (e.g. after a
+      // reload, or opened after being offline) flush before syncing — the
+      // "online" event won't fire again since we're already connected.
+      if (navigator.onLine) {
+        const queued = await pendingCount();
+        if (queued > 0) {
+          let lastCount = -1;
+          while (true) {
+            const result = await flushQueue();
+            if (result.authExpired) { setPendingCount(0); return; }
+            const remaining = await pendingCount();
+            setPendingCount(remaining);
+            if (remaining === 0 || remaining === lastCount) break;
+            lastCount = remaining;
+          }
+        }
+      }
+
       await sync();
     })();
 
