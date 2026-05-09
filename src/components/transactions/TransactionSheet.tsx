@@ -41,7 +41,6 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
   const { refresh } = useTransactions();
   const editFormRef = useRef<EditFormHandle | null>(null);
 
-  // Always read the latest version from the store so in-flight updates reflect live
   const liveTx = useAppStore((s) => s.transactions.find((t) => t.id === initialTx.id)) ?? initialTx;
   const [tx, setTx] = useState<Transaction>(liveTx);
   const [view, setView] = useState<"detail" | "edit">(liveTx.status === "failed" ? "edit" : "detail");
@@ -50,10 +49,7 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
   const [retrying, setRetrying] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Keep local tx in sync with store (SyncProvider polling updates the store)
-  useEffect(() => {
-    setTx(liveTx);
-  }, [liveTx]);
+  useEffect(() => { setTx(liveTx); }, [liveTx]);
 
   // Lock body scroll while sheet is open
   useEffect(() => {
@@ -61,7 +57,7 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
     return () => { document.body.style.overflow = ""; };
   }, []);
 
-  // Poll API while in-flight and online — refresh updates the store which trickles down
+  // Poll API while in-flight and online
   useEffect(() => {
     if (!["queued", "processing"].includes(tx.status ?? "") || !isOnline) return;
     const timer = setInterval(() => refresh(), 5000);
@@ -111,6 +107,43 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
   const isFailed = tx.status === "failed";
   const heroColor = isInFlight ? "var(--color-secondary)" : isFailed ? "var(--color-error)" : "var(--color-primary)";
 
+  // ── Hero action buttons (right side) ──────────────────────────────────────
+  const heroActions = (() => {
+    const deleteBtn = (
+      <button onClick={handleDelete} disabled={deleting}
+        className="w-9 h-9 rounded-full flex items-center justify-center"
+        style={{ background: "rgba(255,255,255,0.15)", opacity: deleting ? 0.5 : 1 }}>
+        <span className="material-symbols-outlined text-white" style={{ fontSize: 20 }}>delete</span>
+      </button>
+    );
+    const saveBtn = (
+      <button onClick={() => editFormRef.current?.save()}
+        className="w-9 h-9 rounded-full flex items-center justify-center"
+        style={{ background: "rgba(255,255,255,0.3)" }}>
+        <span className="material-symbols-outlined text-white" style={{ fontSize: 20 }}>check</span>
+      </button>
+    );
+    const cancelBtn = (
+      <button onClick={() => setView("detail")}
+        className="w-9 h-9 rounded-full flex items-center justify-center"
+        style={{ background: "rgba(255,255,255,0.15)" }}>
+        <span className="material-symbols-outlined text-white" style={{ fontSize: 20 }}>close</span>
+      </button>
+    );
+    const editBtn = (
+      <button onClick={() => setView("edit")}
+        className="w-9 h-9 rounded-full flex items-center justify-center"
+        style={{ background: "rgba(255,255,255,0.15)" }}>
+        <span className="material-symbols-outlined text-white" style={{ fontSize: 20 }}>edit</span>
+      </button>
+    );
+
+    if (isInFlight) return <div className="flex gap-2">{deleteBtn}</div>;
+    if (isFailed)   return <div className="flex gap-2">{deleteBtn}{saveBtn}</div>;
+    if (view === "edit") return <div className="flex gap-2">{cancelBtn}{saveBtn}</div>;
+    return <div className="flex gap-2">{deleteBtn}{editBtn}</div>;
+  })();
+
   return (
     <>
       {/* Backdrop */}
@@ -134,30 +167,15 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
               <span className="material-symbols-outlined text-white" style={{ fontSize: 20 }}>close</span>
             </button>
             <h2 style={{ fontSize: 17, fontWeight: 600, color: "#fff", flex: 1 }}>Transaction</h2>
-            {!isInFlight && !isFailed && view === "detail" && (
-              <button onClick={() => setView("edit")}
-                className="w-9 h-9 rounded-full flex items-center justify-center"
-                style={{ background: "rgba(255,255,255,0.15)" }}>
-                <span className="material-symbols-outlined text-white" style={{ fontSize: 20 }}>edit</span>
-              </button>
-            )}
-            {!isInFlight && view === "edit" && (
-              <div className="flex gap-2">
-                <button onClick={() => setView("detail")}
-                  className="w-9 h-9 rounded-full flex items-center justify-center"
-                  style={{ background: "rgba(255,255,255,0.15)" }}
-                  title="Cancel">
-                  <span className="material-symbols-outlined text-white" style={{ fontSize: 20 }}>close</span>
-                </button>
-                <button onClick={() => editFormRef.current?.save()}
-                  className="w-9 h-9 rounded-full flex items-center justify-center"
-                  style={{ background: "rgba(255,255,255,0.3)" }}
-                  title="Save">
-                  <span className="material-symbols-outlined text-white" style={{ fontSize: 20 }}>check</span>
-                </button>
-              </div>
-            )}
+            {heroActions}
           </div>
+
+          {error && (
+            <p className="mb-3 text-center" style={{ fontSize: 12, color: "rgba(255,255,255,0.9)", background: "rgba(0,0,0,0.2)", borderRadius: 8, padding: "4px 10px" }}>
+              {error}
+            </p>
+          )}
+
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 rounded-2xl flex items-center justify-center flex-shrink-0"
               style={{ background: "rgba(255,255,255,0.15)" }}>
@@ -254,28 +272,6 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
                   <span className="material-symbols-outlined ml-auto" style={{ color: "var(--color-outline)", fontSize: 18 }}>open_in_new</span>
                 </a>
               )}
-
-              {error && <p className="text-center" style={{ fontSize: 13, color: "var(--color-error)" }}>{error}</p>}
-
-              <button onClick={handleDelete} disabled={deleting}
-                className="w-full py-4 rounded-2xl font-semibold flex items-center justify-center gap-2"
-                style={{ background: "var(--color-error-container)", color: "var(--color-error)", opacity: deleting ? 0.6 : 1, cursor: "pointer" }}>
-                <span className="material-symbols-outlined">delete</span>
-                {deleting ? "Deleting…" : "Delete transaction"}
-              </button>
-            </div>
-          )}
-
-          {/* Delete for in-flight/failed */}
-          {(isInFlight || isFailed) && (
-            <div className="px-5 py-4">
-              {error && <p className="text-center mb-3" style={{ fontSize: 13, color: "var(--color-error)" }}>{error}</p>}
-              <button onClick={handleDelete} disabled={deleting}
-                className="w-full py-4 rounded-2xl font-semibold flex items-center justify-center gap-2"
-                style={{ background: "var(--color-error-container)", color: "var(--color-error)", opacity: deleting ? 0.6 : 1, cursor: "pointer" }}>
-                <span className="material-symbols-outlined">delete</span>
-                {deleting ? "Deleting…" : "Delete transaction"}
-              </button>
             </div>
           )}
         </div>

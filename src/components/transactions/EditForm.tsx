@@ -133,12 +133,6 @@ export const EditForm = forwardRef<EditFormHandle, {
         </div>
       </div>
 
-      <button onClick={save} disabled={saving || !itemName.trim() || !amount}
-        className="w-full py-4 rounded-2xl font-semibold flex items-center justify-center gap-2"
-        style={{ background: "var(--color-primary)", color: "var(--color-on-primary)", opacity: saving || !itemName.trim() || !amount ? 0.5 : 1 }}>
-        <span className="material-symbols-outlined">check</span>
-        {saving ? "Saving…" : "Save transaction"}
-      </button>
     </div>
   );
 });
