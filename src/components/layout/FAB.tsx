@@ -1,11 +1,14 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 export function FAB() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
+
+  if (pathname === "/add" || pathname.startsWith("/capture")) return null;
 
   const options = [
     { icon: "edit_note", label: "Enter manually", sub: "Type in the details", href: "/add" },
