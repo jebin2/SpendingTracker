@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import type { Transaction } from "@/types";
-import type { CompareResult } from "@/lib/ai/compare";
+import type { CompareResult, Transaction } from "@/types";
 import { useProfile } from "@/hooks/useProfile";
 import { usePoller } from "@/hooks/usePoller";
 import { Spinner, GeneratingSpinner, FailedState } from "./AnalysisStates";

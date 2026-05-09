@@ -1,53 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
-import {
-  getTransactions,
-  getAnalysisCache,
-  upsertAnalysisCacheRow,
-  getAnalysisFromDrive,
-  storeAnalysisInDrive,
-} from "@/lib/sheets";
-import { compareMerchants } from "@/lib/ai/compare";
-import { getPeriodRange } from "@/lib/date/periods";
-
-const COMPARE_CELL_LIMIT = 40000;
-
-function compareKey(merchants: string[], period: string) {
-  return `compare_${[...merchants].sort().join("|")}_${period}`;
-}
-
-async function runComparison(
-  accessToken: string,
-  sheetId: string,
-  merchants: string[],
-  period: string,
-  region: string
-) {
-  const key = compareKey(merchants, period);
-  try {
-    const { from, to } = getPeriodRange(period);
-    const allTx = await getTransactions(accessToken, sheetId);
-    const filtered = allTx.filter(
-      (t) => t.date >= from && t.date <= to
-    );
-
-    const result = await compareMerchants(merchants, filtered, period, region);
-    const json = JSON.stringify(result);
-
-    const needsDrive = json.length > COMPARE_CELL_LIMIT;
-    let driveFileId = "";
-    let cellJson = json;
-    if (needsDrive) {
-      driveFileId = await storeAnalysisInDrive(accessToken, sheetId, key, json);
-      cellJson = "";
-    }
-
-    await upsertAnalysisCacheRow(accessToken, sheetId, key, "compare", "done", cellJson, driveFileId);
-  } catch (err) {
-    console.error("Compare background error:", err);
-    await upsertAnalysisCacheRow(accessToken, sheetId, key, "compare", "failed").catch(() => {});
-  }
-}
+import { getComparisonStatus, requestComparison } from "@/server/services/comparisonService";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -58,19 +11,9 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const merchants = searchParams.get("merchants")?.split("|").filter(Boolean) ?? [];
   const period = searchParams.get("period") ?? "month";
-  if (merchants.length < 2) return NextResponse.json({ status: "not_started" });
-
-  const cached = await getAnalysisCache(session.access_token, session.sheet_id, compareKey(merchants, period), Infinity);
-  if (!cached) return NextResponse.json({ status: "not_started" });
-  if (cached.status === "generating") return NextResponse.json({ status: "generating" });
-  if (cached.status === "failed") return NextResponse.json({ status: "failed" });
-
-  let summaryJson = cached.summary_json;
-  if (!summaryJson && cached.drive_file_id) {
-    summaryJson = await getAnalysisFromDrive(session.access_token, cached.drive_file_id);
-  }
-
-  return NextResponse.json({ status: "done", result: JSON.parse(summaryJson), generated_at: cached.generated_at });
+  return NextResponse.json(
+    await getComparisonStatus({ accessToken: session.access_token, sheetId: session.sheet_id }, merchants, period)
+  );
 }
 
 export async function POST(req: NextRequest) {
@@ -79,30 +22,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const { merchants, period = "month", region, force_refresh } = await req.json();
-  if (!merchants || merchants.length < 2) {
+  const result = await requestComparison(
+    { accessToken: session.access_token, sheetId: session.sheet_id },
+    await req.json()
+  );
+
+  if ("error" in result) {
     return NextResponse.json({ error: "Select at least 2 merchants" }, { status: 400 });
   }
 
-  const key = compareKey(merchants, period);
-
-  const current = await getAnalysisCache(session.access_token, session.sheet_id, key, Infinity);
-  if (current?.status === "generating") return NextResponse.json({ status: "generating" });
-
-  if (!force_refresh && current?.status === "done") {
-    const ageMs = Date.now() - new Date(current.generated_at).getTime();
-    if (ageMs < 24 * 60 * 60 * 1000) {
-      let summaryJson = current.summary_json;
-      if (!summaryJson && current.drive_file_id) {
-        summaryJson = await getAnalysisFromDrive(session.access_token, current.drive_file_id);
-      }
-      return NextResponse.json({ status: "done", result: JSON.parse(summaryJson), generated_at: current.generated_at });
-    }
-  }
-
-  await upsertAnalysisCacheRow(session.access_token, session.sheet_id, key, "compare", "generating");
-
-  runComparison(session.access_token, session.sheet_id, merchants, period, region ?? "").catch(() => {});
-
-  return NextResponse.json({ status: "generating" });
+  return NextResponse.json(result);
 }
