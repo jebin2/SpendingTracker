@@ -146,12 +146,12 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
 
   return (
     <>
-      {/* Backdrop */}
-      <div className="fixed inset-0 z-40" style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}
+      {/* Backdrop — z-[60] covers the bottom nav (z-50) so nav is unreachable while sheet is open */}
+      <div className="fixed inset-0 z-[60]" style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}
         onClick={onClose} />
 
-      {/* Sheet */}
-      <div className="fixed inset-x-0 bottom-0 z-50 flex flex-col rounded-t-3xl overflow-hidden"
+      {/* Sheet — z-[70] sits above the backdrop */}
+      <div className="fixed inset-x-0 bottom-0 z-[70] flex flex-col rounded-t-3xl overflow-hidden"
         style={{ background: "var(--color-surface)", maxHeight: "92dvh" }}>
 
         {/* Drag handle */}
