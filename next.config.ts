@@ -18,6 +18,7 @@ const withSerwist = withSerwistInit({
   swSrc: "src/app/sw.ts",
   swDest: "public/sw.js",
   cacheOnNavigation: true,
+  reloadOnOnline: false,
   disable: process.env.NODE_ENV === "development",
   additionalPrecacheEntries: [
     { url: "/~offline", revision },

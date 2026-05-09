@@ -14,7 +14,6 @@ const serwist = new Serwist({
   precacheEntries: self.__SW_MANIFEST,
   skipWaiting: true,
   clientsClaim: true,
-  navigationPreload: true,
   runtimeCaching: [
     // Cache the session endpoint so useSession() works offline (7-day TTL)
     {
