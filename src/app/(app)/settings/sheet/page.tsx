@@ -48,7 +48,7 @@ export default function SheetSettingsPage() {
               <span className="material-symbols-outlined" style={{ color: "#2e7d32", fontSize: 28 }}>table_chart</span>
             </div>
             <div>
-              <p style={{ fontSize: 17, fontWeight: 600, color: "var(--color-on-surface)" }}>SpendingTracker</p>
+              <p style={{ fontSize: 17, fontWeight: 600, color: "var(--color-on-surface)" }}>FundsFlee</p>
               <p style={{ fontSize: 13, color: "var(--color-on-surface-variant)" }}>Your Google Drive</p>
               <div className="flex items-center gap-1.5 mt-1">
                 <div className="w-2 h-2 rounded-full" style={{ background: isOnline ? "#4caf50" : "#9e9e9e" }} />

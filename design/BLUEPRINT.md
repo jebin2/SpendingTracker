@@ -1,4 +1,4 @@
-# SpendingTracker — Full Project Blueprint
+# FundsFlee — Full Project Blueprint
 
 > Fully agentic, AI-first personal spending tracker.
 > Google Sign-In · Google Sheets as backend · PWA · Offline-first · Claude-powered
@@ -160,7 +160,7 @@ User input (any method)
 
 ## 4. Data Model (Google Sheet Structure)
 
-The app auto-creates a Google Sheet named **"SpendingTracker"** in the user's Drive on first login. It contains multiple sheets (tabs):
+The app auto-creates a Google Sheet named **"FundsFlee"** in the user's Drive on first login. It contains multiple sheets (tabs):
 
 ### Sheet: `transactions`
 
@@ -562,7 +562,7 @@ GET  /api/auth/session
 
 ### Sheet Management
 ```
-POST /api/sheet/init          Create "SpendingTracker" sheet if not exists
+POST /api/sheet/init          Create "FundsFlee" sheet if not exists
                               Response: { sheetId, sheetUrl }
 
 GET  /api/sheet/sync          Full sync status check
@@ -840,7 +840,7 @@ Shortcut shows: notification "₹450 logged at Swiggy"
 ## 12. Folder Structure
 
 ```
-SpendingTracker/
+FundsFlee/
 ├── design/
 │   └── BLUEPRINT.md          ← this file
 │

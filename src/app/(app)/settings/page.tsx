@@ -178,7 +178,7 @@ export default function SettingsPage() {
         </div>
       )}
 
-      <p className="text-center" style={{ fontSize: 12, color: "var(--color-outline)" }}>SpendingTracker v1.0.0 · Built with Claude claude-sonnet-4-6</p>
+      <p className="text-center" style={{ fontSize: 12, color: "var(--color-outline)" }}>FundsFlee v1.0.0 · Built with Claude claude-sonnet-4-6</p>
     </div>
   );
 }

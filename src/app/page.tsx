@@ -34,7 +34,7 @@ export default function LandingPage() {
         </div>
 
         <h1 style={{ fontSize: 28, fontWeight: 700, color: "#fff", letterSpacing: "-0.02em", lineHeight: 1.2 }} className="mb-2">
-          SpendingTracker
+          FundsFlee
         </h1>
         <p style={{ fontSize: 15, color: "rgba(255,255,255,0.8)" }} className="mb-6">
           Your AI spending agent

@@ -4,9 +4,9 @@ import { getMetaValues, setMetaValue } from "./meta";
 
 // appProperties are tied to our OAuth client ID — invisible in Drive UI,
 // survives renames/moves, and is the authoritative app identifier.
-const APP_PROP_KEY = "spendingTrackerRole";
+const APP_PROP_KEY = "fundsFleeRole";
 const APP_FOLDER_ROLE = "receipts";
-const FOLDER_DISPLAY_NAME = "SpendingTracker Receipts";
+const FOLDER_DISPLAY_NAME = "FundsFlee Receipts";
 
 // ── Drive / Receipts ──────────────────────────────────────────────────────────
 

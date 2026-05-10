@@ -24,7 +24,7 @@ export function TopNav({ userName, userImage }: { userName?: string; userImage?:
       }}
     >
       <Link href="/dashboard" style={{ fontSize: 20, fontWeight: 700, color: "var(--color-primary)" }}>
-        SpendingTracker
+        FundsFlee
       </Link>
 
       <nav className="flex items-center gap-1 text-sm font-medium" style={{ color: "var(--color-on-surface-variant)" }}>

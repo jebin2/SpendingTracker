@@ -100,9 +100,9 @@ export default function ShortcutSettingsPage() {
         <div className="rounded-2xl border p-4 flex flex-col gap-4" style={{ borderColor: "var(--color-outline-variant)", background: "var(--color-surface-container-lowest)" }}>
           <p style={{ fontSize: 15, fontWeight: 600, color: "var(--color-on-surface)" }}>Setup steps</p>
           {[
-            "Download the SpendingTracker Shortcut from the link below",
+            "Download the FundsFlee Shortcut from the link below",
             "Paste your token when prompted during Shortcut setup",
-            "Open any SMS → tap Share → tap \"Log to SpendingTracker\"",
+            "Open any SMS → tap Share → tap \"Log to FundsFlee\"",
           ].map((step, i) => (
             <div key={i} className="flex gap-3 items-start">
               <div className="w-7 h-7 rounded-full flex items-center justify-center font-bold text-sm flex-shrink-0" style={{ background: "var(--color-primary)", color: "#fff" }}>{i + 1}</div>

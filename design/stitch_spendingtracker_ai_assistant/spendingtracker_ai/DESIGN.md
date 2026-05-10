@@ -1,5 +1,5 @@
 ---
-name: SpendingTracker AI
+name: FundsFlee AI
 colors:
   surface: '#fcf8ff'
   surface-dim: '#dcd8e3'

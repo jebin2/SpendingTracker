@@ -1,4 +1,4 @@
-# SpendingTracker Modularity and Coupling Report
+# FundsFlee Modularity and Coupling Report
 
 Date: 2026-05-09
 

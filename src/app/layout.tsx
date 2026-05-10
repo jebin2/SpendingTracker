@@ -3,13 +3,13 @@ import "./globals.css";
 import { SessionProvider } from "next-auth/react";
 
 export const metadata: Metadata = {
-  title: "SpendingTracker",
+  title: "FundsFlee",
   description: "Your AI spending agent",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "SpendingTracker",
+    title: "FundsFlee",
     startupImage: "/icon-512.png",
   },
   other: {

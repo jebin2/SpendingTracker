@@ -1,4 +1,4 @@
-# Stitch UI Prompts — SpendingTracker
+# Stitch UI Prompts — FundsFlee
 
 > One prompt per page/section. Use these at stitch.withgoogle.com.
 > Design language: Mobile-first PWA, clean and modern, Material Design 3 influence.
@@ -20,11 +20,11 @@ Rounded cards with soft drop shadows. No harsh borders. Generous white space.
 ## 1. Landing Page
 
 ```
-Design a mobile app landing screen for a personal AI spending tracker called "SpendingTracker".
+Design a mobile app landing screen for a personal AI spending tracker called "FundsFlee".
 
 Layout (top to bottom):
 - Top 40% of screen: a soft gradient background (indigo to violet), centered illustration of a phone with a glowing chart/sparkle icon — minimal, not cartoonish
-- App name "SpendingTracker" in bold white below the illustration, subtitle in lighter white: "Your AI spending agent"
+- App name "FundsFlee" in bold white below the illustration, subtitle in lighter white: "Your AI spending agent"
 - Three small feature bullets below in white with icons: "Snap receipts, paste SMS" | "AI finds duplicates" | "Smart tips for your city"
 - Bottom 30%: white rounded card anchored to the bottom with:
   - A "Sign in with Google" button (white button with Google logo, full-width, rounded pill shape)
@@ -43,10 +43,10 @@ Layout:
 - Top: progress dots (4 dots, first filled in indigo, rest empty grey) centered
 - Large friendly illustration in the center: a Google Sheets icon with a sparkle/AI star overlay — conveying "your data, AI-powered"
 - Heading (bold, large): "Your money, your sheet"
-- Body text (2 lines, grey): "SpendingTracker saves everything to a Google Sheet in your Drive. You own it. We just make it smart."
+- Body text (2 lines, grey): "FundsFlee saves everything to a Google Sheet in your Drive. You own it. We just make it smart."
 - Bullet list with checkmarks (indigo):
   ✓ We'll create one Sheet in your Google Drive
-  ✓ We only read/write your SpendingTracker sheet
+  ✓ We only read/write your FundsFlee sheet
   ✓ You can open it in Google Sheets anytime
 - Bottom: full-width indigo pill button "Continue" and a small grey link "How does this work?"
 ```
@@ -63,7 +63,7 @@ Layout:
 - Large success animation placeholder (green checkmark inside a sheet icon)
 - Heading: "Your sheet is ready!"
 - Card in the center (white, rounded, with a subtle border):
-  - Row with Google Sheets icon + sheet name "SpendingTracker — Jebin" in bold + small grey "Created just now"
+  - Row with Google Sheets icon + sheet name "FundsFlee — Jebin" in bold + small grey "Created just now"
   - Tappable link row: "Open in Google Sheets →" in indigo
 - Body text below card (grey, small): "This sheet has 3 tabs: transactions, categories, and settings. Don't delete it — the app reads from here."
 - Bottom: full-width indigo pill button "Looks good, continue"
@@ -546,7 +546,7 @@ User profile card at top (white, rounded, tap to go to profile settings):
 Settings groups (each group is a white rounded card):
 
 Group 1 — Account & Data:
-- Row: 🗂️ "Google Sheet" | "SpendingTracker · Last synced 2m ago" grey | chevron
+- Row: 🗂️ "Google Sheet" | "FundsFlee · Last synced 2m ago" grey | chevron
 - Row: 📱 "iPhone Shortcut" | "Connected" green dot | chevron
 - Row: 📤 "Export Data" | "CSV download" grey | chevron
 
@@ -611,7 +611,7 @@ Header: back arrow, "Google Sheet" title.
 
 Sheet info card (white, rounded, prominent):
 - Google Sheets icon (large, left)
-- "SpendingTracker — Jebin" bold
+- "FundsFlee — Jebin" bold
 - "Created Apr 26, 2025" grey small
 - Green dot + "Connected" status
 - "Open in Google Sheets ↗" — indigo tappable link row

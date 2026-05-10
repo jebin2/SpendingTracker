@@ -119,12 +119,12 @@ export default function OnboardingPage() {
                 Welcome, {session?.user?.name?.split(" ")[0]}!
               </h1>
               <p style={{ fontSize: 16, color: "var(--color-on-surface-variant)", lineHeight: 1.6 }}>
-                SpendingTracker will create a private Google Sheet in your Drive to store all your expenses. You own the data — always.
+                FundsFlee will create a private Google Sheet in your Drive to store all your expenses. You own the data — always.
               </p>
             </div>
             <div className="w-full rounded-2xl p-4 flex flex-col gap-3" style={{ background: "var(--color-surface-container)" }}>
               {[
-                { icon: "table_chart", text: "Creates 'SpendingTracker' sheet in your Google Drive" },
+                { icon: "table_chart", text: "Creates 'FundsFlee' sheet in your Google Drive" },
                 { icon: "lock", text: "Only you can access it — we never read it without your session" },
                 { icon: "download", text: "You can export or delete it anytime" },
               ].map(({ icon, text }) => (
@@ -144,7 +144,7 @@ export default function OnboardingPage() {
                 {loading ? (
                   <><div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "rgba(255,255,255,0.4)", borderTopColor: "#fff" }} /> Creating your sheet…</>
                 ) : (
-                  <><span className="material-symbols-outlined">arrow_forward</span> Create my SpendingTracker</>
+                  <><span className="material-symbols-outlined">arrow_forward</span> Create my FundsFlee</>
                 )}
               </button>
             </div>
@@ -164,7 +164,7 @@ export default function OnboardingPage() {
             <div className="w-full rounded-2xl p-4 border flex items-center gap-4" style={{ background: "var(--color-surface-container-lowest)", borderColor: "var(--color-outline-variant)" }}>
               <span className="material-symbols-outlined" style={{ fontSize: 32, color: "#2e7d32" }}>table_chart</span>
               <div className="text-left flex-1">
-                <p style={{ fontWeight: 600, color: "var(--color-on-surface)" }}>SpendingTracker — {session?.user?.name}</p>
+                <p style={{ fontWeight: 600, color: "var(--color-on-surface)" }}>FundsFlee — {session?.user?.name}</p>
                 <p style={{ fontSize: 12, color: "var(--color-on-surface-variant)" }}>Google Sheets · Your Drive</p>
               </div>
             </div>

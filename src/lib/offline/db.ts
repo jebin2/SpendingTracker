@@ -14,7 +14,7 @@ class OfflineDB extends Dexie {
   queue!: Table<QueuedOp, number>;
 
   constructor() {
-    super("SpendingTrackerOffline");
+    super("FundsFleeOffline");
     this.version(1).stores({
       transactions: "id, date",
       queue: "++id, created_at",

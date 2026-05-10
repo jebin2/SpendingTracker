@@ -3,9 +3,9 @@ import { getSheetsClient, getDriveClient } from "./client";
 
 // appProperties are tied to our OAuth client ID — invisible in Drive UI,
 // survives renames/moves, and is the authoritative app identifier.
-const APP_PROP_KEY = "spendingTrackerRole";
+const APP_PROP_KEY = "fundsFleeRole";
 const APP_SHEET_ROLE = "main";
-const SHEET_DISPLAY_NAME = "SpendingTracker";
+const SHEET_DISPLAY_NAME = "FundsFlee";
 
 export const EXPECTED_HEADERS = [
   "id", "date", "time", "amount", "original_amount", "original_currency",

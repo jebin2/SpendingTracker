@@ -1,4 +1,4 @@
-# SpendingTracker — Google Sheet Schema
+# FundsFlee — Google Sheet Schema
 
 The app uses a single Google Spreadsheet (identified via Drive `appProperties`, not by name) with five tabs.
 

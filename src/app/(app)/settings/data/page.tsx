@@ -30,7 +30,7 @@ export default function DataSettingsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `SpendingTracker-${todayISO()}.csv`;
+      a.download = `FundsFlee-${todayISO()}.csv`;
       a.click();
       URL.revokeObjectURL(url);
     } catch {
