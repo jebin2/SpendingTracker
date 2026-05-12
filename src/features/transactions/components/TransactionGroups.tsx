@@ -3,6 +3,7 @@ import type { PendingSuggestion, Transaction } from "@/types";
 import { TransactionRow } from "@/components/TransactionRow";
 import { formatINR } from "@/lib/format/currency";
 import { formatTransactionDateLabel } from "@/features/transactions/utils/list";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface TransactionGroupsProps {
   sortedDates: string[];
@@ -27,18 +28,16 @@ export function TransactionGroups({
 }: TransactionGroupsProps) {
   if (sortedDates.length === 0) {
     return (
-      <div className="flex flex-col items-center py-16 gap-4 text-center">
-        <div className="w-20 h-20 rounded-3xl flex items-center justify-center text-4xl" style={{ background: "var(--color-surface-container)" }}>🧾</div>
-        <p style={{ fontSize: 18, fontWeight: 600, color: "var(--color-on-surface)" }}>No transactions found</p>
-        <p style={{ fontSize: 14, color: "var(--color-on-surface-variant)" }}>
-          {searchActive ? "Try a different search term" : "Add your first expense to get started"}
-        </p>
-        {!searchActive && (
+      <EmptyState
+        icon="🧾"
+        title="No transactions found"
+        description={searchActive ? "Try a different search term" : "Add your first expense to get started"}
+        action={!searchActive ? (
           <Link href="/add" className="px-6 py-3 rounded-2xl font-semibold" style={{ background: "var(--color-primary)", color: "#fff" }}>
             Add manually
           </Link>
-        )}
-      </div>
+        ) : undefined}
+      />
     );
   }
 

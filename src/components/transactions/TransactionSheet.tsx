@@ -7,7 +7,8 @@ import { EditForm, type EditFormHandle } from "@/components/transactions/EditFor
 import { ReceiptItemsPopup } from "@/components/transactions/ReceiptItemsPopup";
 import { removeLocalTransaction, enqueueOp, pendingCount } from "@/lib/offline";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { useAppStore } from "@/store";
+import { useTransactionsStore } from "@/store/transactionsStore";
+import { useNetworkStore } from "@/store/networkStore";
 import { useTransactions } from "@/hooks/useTransactions";
 
 // ── InFlight placeholder ──────────────────────────────────────────────────────
@@ -37,11 +38,11 @@ interface TransactionSheetProps {
 
 export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetProps) {
   const isOnline = useOnlineStatus();
-  const removeTransaction = useAppStore((s) => s.removeTransaction);
+  const removeTransaction = useTransactionsStore((s) => s.removeTransaction);
   const { refresh } = useTransactions();
   const editFormRef = useRef<EditFormHandle | null>(null);
 
-  const liveTx = useAppStore((s) => s.transactions.find((t) => t.id === initialTx.id)) ?? initialTx;
+  const liveTx = useTransactionsStore((s) => s.transactions.find((t) => t.id === initialTx.id)) ?? initialTx;
   const [tx, setTx] = useState<Transaction>(liveTx);
   const [view, setView] = useState<"detail" | "edit">(liveTx.status === "failed" ? "edit" : "detail");
   const [showReceiptItems, setShowReceiptItems] = useState(false);
@@ -78,7 +79,7 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
         removeTransaction(tx.id);
         await removeLocalTransaction(tx.id);
         await enqueueOp("DELETE", `/api/transactions/${tx.id}`, null);
-        useAppStore.getState().setPendingCount(await pendingCount());
+        useNetworkStore.getState().setPendingCount(await pendingCount());
       }
       onClose();
     } catch (err) {

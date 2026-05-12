@@ -5,12 +5,12 @@ import { useRouter } from "next/navigation";
 import type { Transaction } from "@/types";
 import { useOfflineFetch } from "@/hooks/useOfflineFetch";
 import { saveLocalTransaction } from "@/lib/offline";
-import { useAppStore } from "@/store";
+import { useTransactionsStore } from "@/store/transactionsStore";
 
 export function useCreateTransaction() {
   const router = useRouter();
   const { safeFetch } = useOfflineFetch();
-  const addTransaction = useAppStore((s) => s.addTransaction);
+  const addTransaction = useTransactionsStore((s) => s.addTransaction);
   const [saving, setSaving] = useState(false);
 
   async function createTransaction(tx: Transaction): Promise<string | null> {

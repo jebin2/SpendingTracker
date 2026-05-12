@@ -1,27 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireSession } from "@/server/http/requireSession";
 import { parseReceiptImage } from "@/lib/ai/parse-image";
 import { apiError } from "@/lib/api-error";
 import { todayISO } from "@/lib/date/iso";
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.access_token) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+  const result = await requireSession();
+  if (!result.ok) return result.response;
   const formData = await req.formData();
   const image = formData.get("image") as File | null;
   const region = formData.get("region") as string | null;
-
   if (!image) return NextResponse.json({ error: "image is required" }, { status: 400 });
-
   const validTypes = ["image/jpeg", "image/png", "image/webp"] as const;
   const mediaType = image.type as typeof validTypes[number];
   if (!validTypes.includes(mediaType)) {
     return NextResponse.json({ error: "Only JPEG, PNG, WebP supported" }, { status: 400 });
   }
-
   const base64 = Buffer.from(await image.arrayBuffer()).toString("base64");
   try {
     const extracted = await parseReceiptImage(base64, mediaType, region ?? undefined, todayISO());

@@ -1,6 +1,8 @@
 import { formatINR } from "@/lib/format/currency";
 import { getDuplicateGroups, type DuplicateGroup } from "@/features/transactions/utils/list";
 import type { Transaction } from "@/types";
+import { Spinner } from "@/components/ui/Spinner";
+import { EmptyState } from "@/components/ui/EmptyState";
 
 interface DuplicateGroupsListProps {
   transactions: Transaction[];
@@ -14,7 +16,7 @@ export function DuplicateGroupsList({ transactions, dupChecking, dupError, onRet
   if (dupChecking) {
     return (
       <div className="flex flex-col items-center py-16 gap-3">
-        <div className="w-8 h-8 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "#ffcc80", borderTopColor: "#e65100" }} />
+        <Spinner size={32} color="#ffcc80" activeColor="#e65100" />
         <p style={{ fontSize: 14, color: "var(--color-on-surface-variant)" }}>AI is checking for duplicates…</p>
       </div>
     );
@@ -42,13 +44,7 @@ export function DuplicateGroupsList({ transactions, dupChecking, dupError, onRet
   const dupGroups = getDuplicateGroups(transactions);
 
   if (dupGroups.length === 0) {
-    return (
-      <div className="flex flex-col items-center py-16 gap-4 text-center">
-        <div className="w-20 h-20 rounded-3xl flex items-center justify-center text-4xl" style={{ background: "var(--color-surface-container)" }}>✅</div>
-        <p style={{ fontSize: 18, fontWeight: 600, color: "var(--color-on-surface)" }}>No duplicates found</p>
-        <p style={{ fontSize: 14, color: "var(--color-on-surface-variant)" }}>All your transactions look unique</p>
-      </div>
-    );
+    return <EmptyState icon="✅" title="No duplicates found" description="All your transactions look unique" />;
   }
 
   return (

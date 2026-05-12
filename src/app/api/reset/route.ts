@@ -1,16 +1,13 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireSession } from "@/server/http/requireSession";
 import { resetSheet } from "@/lib/sheets";
 import { apiError } from "@/lib/api-error";
 
 export async function POST() {
-  const session = await auth();
-  if (!session?.access_token || !session.sheet_id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
+  const result = await requireSession();
+  if (!result.ok) return result.response;
   try {
-    await resetSheet(session.access_token, session.sheet_id);
+    await resetSheet(result.session.accessToken, result.session.sheetId);
     return NextResponse.json({ ok: true });
   } catch (err) {
     return apiError("Reset error", err);

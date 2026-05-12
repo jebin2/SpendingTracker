@@ -5,7 +5,7 @@ import type { Transaction } from "@/types";
 import { CATEGORIES, PAYMENT_METHODS } from "@/lib/constants";
 import { useOfflineFetch } from "@/hooks/useOfflineFetch";
 import { patchLocalTransaction } from "@/lib/offline";
-import { useAppStore } from "@/store";
+import { useTransactionsStore } from "@/store/transactionsStore";
 
 export interface EditFormHandle {
   save: () => void;
@@ -29,7 +29,7 @@ export const EditForm = forwardRef<EditFormHandle, {
   const [saving, setSaving] = useState(false);
 
   const { safeFetch } = useOfflineFetch();
-  const updateTransaction = useAppStore((s) => s.updateTransaction);
+  const updateTransaction = useTransactionsStore((s) => s.updateTransaction);
 
   useImperativeHandle(ref, () => ({ save }));
 

@@ -1,7 +1,7 @@
 "use client";
 
-import { useAppStore } from "@/store";
+import { useNetworkStore } from "@/store/networkStore";
 
 export function useOnlineStatus() {
-  return useAppStore((s) => s.isOnline);
+  return useNetworkStore((s) => s.isOnline);
 }

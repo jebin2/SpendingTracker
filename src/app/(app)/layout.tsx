@@ -9,7 +9,8 @@ import { FAB } from "@/components/layout/FAB";
 import { PullToRefresh } from "@/components/layout/PullToRefresh";
 import { SyncProvider } from "@/providers/SyncProvider";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
-import { useAppStore } from "@/store";
+import { useTransactionsStore } from "@/store/transactionsStore";
+import { useNetworkStore } from "@/store/networkStore";
 import { pullTransactions } from "@/lib/offline";
 import { useCallback } from "react";
 
@@ -98,8 +99,8 @@ function AppShell({
   children: React.ReactNode;
 }) {
   const isOnline = useOnlineStatus();
-  const pendingCount = useAppStore((s) => s.pendingCount);
-  const setTransactions = useAppStore((s) => s.setTransactions);
+  const pendingCount = useNetworkStore((s) => s.pendingCount);
+  const setTransactions = useTransactionsStore((s) => s.setTransactions);
 
   const handleRefresh = useCallback(async () => {
     // 1. Check for new service worker (gets latest JS/HTML/CSS)

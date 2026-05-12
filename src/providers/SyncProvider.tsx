@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect } from "react";
-import { useAppStore } from "@/store";
+import { useTransactionsStore } from "@/store/transactionsStore";
+import { useNetworkStore } from "@/store/networkStore";
 import {
   getLocalTransactions,
   pullTransactions,
@@ -10,10 +11,11 @@ import {
 } from "@/lib/offline";
 
 export function SyncProvider({ children }: { children: React.ReactNode }) {
-  const { setTransactions, setOnline, setPendingCount, setSyncing } = useAppStore();
+  const { setTransactions, setSyncing } = useTransactionsStore();
+  const { setOnline, setPendingCount } = useNetworkStore();
 
   async function sync() {
-    if (useAppStore.getState().syncing) return;
+    if (useTransactionsStore.getState().syncing) return;
     setSyncing(true);
     try {
       const txs = await pullTransactions();
@@ -25,8 +27,6 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // Single function used by BOTH app-start (already online) and the online event.
-  // Keeps the logic in one place and eliminates the race between the two paths.
   async function goOnline() {
     setOnline(true);
     let lastCount = -1;
@@ -46,7 +46,6 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       try {
         const localTxs = await getLocalTransactions();
         if (localTxs.length > 0) setTransactions(localTxs);
-
         const count = await pendingCount();
         if (count > 0) setPendingCount(count);
       } catch (err) {
@@ -61,10 +60,8 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     })();
 
     const handleOffline = () => setOnline(false);
-
     window.addEventListener("online", goOnline);
     window.addEventListener("offline", handleOffline);
-
     return () => {
       window.removeEventListener("online", goOnline);
       window.removeEventListener("offline", handleOffline);

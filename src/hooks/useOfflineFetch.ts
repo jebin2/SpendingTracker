@@ -1,6 +1,6 @@
 "use client";
 
-import { useAppStore } from "@/store";
+import { useNetworkStore } from "@/store/networkStore";
 import { enqueueOp, pendingCount, isFlushing } from "@/lib/offline";
 
 function parseBody(options: RequestInit & { offlineBody?: unknown }): unknown {
@@ -9,7 +9,7 @@ function parseBody(options: RequestInit & { offlineBody?: unknown }): unknown {
   try {
     return JSON.parse(options.body as string);
   } catch {
-    return options.body; // Fallback: store raw string
+    return options.body;
   }
 }
 
@@ -29,8 +29,8 @@ async function queueMutation(
 }
 
 export function useOfflineFetch() {
-  const isOnline = useAppStore((s) => s.isOnline);
-  const setPendingCount = useAppStore((s) => s.setPendingCount);
+  const isOnline = useNetworkStore((s) => s.isOnline);
+  const setPendingCount = useNetworkStore((s) => s.setPendingCount);
 
   async function safeFetch(
     url: string,
@@ -43,17 +43,13 @@ export function useOfflineFetch() {
       return queueMutation(method, url, options, setPendingCount);
     }
 
-    // If queue is currently flushing, queue new mutations rather than sending them
-    // directly — prevents PATCH/DELETE racing a concurrent POST for the same resource.
     if (method !== "GET" && isFlushing()) {
       return queueMutation(method, url, options, setPendingCount);
     }
 
-    // Online path — but network may drop mid-request
     try {
       return await fetch(url, options);
     } catch {
-      // Network dropped during the request — queue mutation, fail reads
       if (method !== "GET") {
         return queueMutation(method, url, options, setPendingCount);
       }

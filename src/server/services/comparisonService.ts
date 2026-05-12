@@ -1,16 +1,12 @@
-import { compareMerchants } from "@/lib/ai/compare";
-import { getPeriodRange } from "@/lib/date/periods";
 import {
   getAnalysisCache,
   getAnalysisFromDrive,
-  getTransactions,
-  storeAnalysisInDrive,
   upsertAnalysisCacheRow,
 } from "@/lib/sheets";
 import type { CompareResult } from "@/types";
 import type { SheetSession } from "./types";
+import { runComparisonJob } from "@/server/jobs/comparisonJob";
 
-const COMPARE_CELL_LIMIT = 40000;
 const CACHE_FRESH_MS = 24 * 60 * 60 * 1000;
 
 interface ComparisonRequest {
@@ -49,40 +45,6 @@ async function readCachedComparison(
   };
 }
 
-async function runComparison(
-  session: SheetSession,
-  merchants: string[],
-  period: string,
-  region: string
-): Promise<void> {
-  const key = compareKey(merchants, period);
-
-  try {
-    const { from, to } = getPeriodRange(period);
-    const allTx = await getTransactions(session.accessToken, session.sheetId);
-    const filtered = allTx.filter((t) => t.date >= from && t.date <= to);
-    const result = await compareMerchants(merchants, filtered, period, region);
-    const json = JSON.stringify(result);
-
-    const needsDrive = json.length > COMPARE_CELL_LIMIT;
-    const driveFileId = needsDrive
-      ? await storeAnalysisInDrive(session.accessToken, session.sheetId, key, json)
-      : "";
-
-    await upsertAnalysisCacheRow(
-      session.accessToken,
-      session.sheetId,
-      key,
-      "compare",
-      "done",
-      needsDrive ? "" : json,
-      driveFileId
-    );
-  } catch (err) {
-    console.error("Compare background error:", err);
-    await upsertAnalysisCacheRow(session.accessToken, session.sheetId, key, "compare", "failed").catch(() => {});
-  }
-}
 
 export async function getComparisonStatus(
   session: SheetSession,
@@ -115,7 +77,7 @@ export async function requestComparison(
 
   await upsertAnalysisCacheRow(session.accessToken, session.sheetId, key, "compare", "generating");
 
-  runComparison(session, merchants, period, request.region ?? "").catch(() => {});
+  runComparisonJob(session, merchants, period, request.region ?? "").catch(() => {});
 
   return { status: "generating" };
 }

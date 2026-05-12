@@ -1,16 +1,12 @@
-import { analyzeSpending } from "@/lib/ai/analyze";
-import { getPeriodRange } from "@/lib/date/periods";
 import {
   getAnalysisCache,
   getAnalysisFromDrive,
-  getTransactions,
-  storeAnalysisInDrive,
   upsertAnalysisCacheRow,
 } from "@/lib/sheets";
 import type { AnalysisResult } from "@/types";
 import type { SheetSession } from "./types";
+import { runAnalysisJob } from "@/server/jobs/analysisJob";
 
-const ANALYSIS_CELL_LIMIT = 40000;
 const CACHE_FRESH_MS = 24 * 60 * 60 * 1000;
 
 interface AnalysisRequest {
@@ -45,39 +41,6 @@ async function readCachedAnalysis(
   };
 }
 
-async function runAnalysis(
-  session: SheetSession,
-  period: string,
-  region: string,
-  lifestyleTags: string[]
-): Promise<void> {
-  const { from, to, label } = getPeriodRange(period);
-
-  try {
-    const allTx = await getTransactions(session.accessToken, session.sheetId);
-    const filtered = allTx.filter((t) => t.date >= from && t.date <= to);
-    const result = await analyzeSpending(filtered, label, region, lifestyleTags);
-    const json = JSON.stringify(result);
-
-    const needsDrive = json.length > ANALYSIS_CELL_LIMIT;
-    const driveFileId = needsDrive
-      ? await storeAnalysisInDrive(session.accessToken, session.sheetId, period, json)
-      : "";
-
-    await upsertAnalysisCacheRow(
-      session.accessToken,
-      session.sheetId,
-      period,
-      period,
-      "done",
-      needsDrive ? "" : json,
-      driveFileId
-    );
-  } catch (err) {
-    console.error("Background analysis failed:", err);
-    await upsertAnalysisCacheRow(session.accessToken, session.sheetId, period, period, "failed").catch(() => {});
-  }
-}
 
 export async function getAnalysisStatus(
   session: SheetSession,
@@ -106,7 +69,7 @@ export async function requestAnalysis(
 
   await upsertAnalysisCacheRow(session.accessToken, session.sheetId, period, period, "generating");
 
-  runAnalysis(session, period, request.region ?? "", request.lifestyle_tags ?? []).catch(() => {});
+  runAnalysisJob(session, period, request.region ?? "", request.lifestyle_tags ?? []).catch(() => {});
 
   return { status: "generating" };
 }

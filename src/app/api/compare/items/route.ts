@@ -1,27 +1,23 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { requireSession } from "@/server/http/requireSession";
 import { getTransactions, getAnalysisCache, upsertAnalysisCacheRow } from "@/lib/sheets";
 import { normalizeItemNames } from "@/lib/ai/normalize-items";
 import type { ItemPriceComparison } from "@/types";
 
-// Fingerprint = sorted unique names joined — cache key changes when new items appear
 function fingerprint(names: string[]): string {
   return [...names].sort().join("|");
 }
 
 function buildComparisons(
-  transactions: { merchant: string; amount: number; item_name?: string; date: string; notes?: string; notes_deleted?: boolean }[],
+  transactions: { merchant: string; amount: number; item_name?: string; date: string; notes?: string }[],
   groups: { canonical: string; variants: string[] }[]
 ): ItemPriceComparison[] {
-  // variant (lowercase) → canonical
   const canonMap: Record<string, string> = {};
   for (const g of groups) {
     for (const v of g.variants) canonMap[v.toLowerCase().trim()] = g.canonical;
   }
 
-  // canonical → merchant → prices
   const data: Record<string, Record<string, { prices: number[]; lastDate: string; notes?: string }>> = {};
-
   for (const tx of transactions) {
     if (!tx.item_name) continue;
     const canon = canonMap[tx.item_name.toLowerCase().trim()] ?? tx.item_name;
@@ -52,51 +48,25 @@ function buildComparisons(
 }
 
 export async function GET() {
-  const session = await auth();
-  if (!session?.access_token || !session.sheet_id) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const result = await requireSession();
+  if (!result.ok) return result.response;
+  const { accessToken, sheetId } = result.session;
 
-  const allTx = await getTransactions(session.access_token, session.sheet_id);
-  const withItems = allTx.filter(
-    (t) => t.item_name && t.amount > 0
-  );
-
-  if (withItems.length === 0) {
-    return NextResponse.json({ comparisons: [], total_items: 0 });
-  }
+  const allTx = await getTransactions(accessToken, sheetId);
+  const withItems = allTx.filter((t) => t.item_name && t.amount > 0);
+  if (withItems.length === 0) return NextResponse.json({ comparisons: [], total_items: 0 });
 
   const uniqueNames = [...new Set(withItems.map((t) => t.item_name!))];
-  const fp = fingerprint(uniqueNames);
-  const cacheKey = `item_norm_${fp.slice(0, 60)}`; // truncate for sheet cell
+  const cacheKey = `item_norm_${fingerprint(uniqueNames).slice(0, 60)}`;
 
-  // Check cache — no TTL (same fingerprint = same data)
-  const cached = await getAnalysisCache(
-    session.access_token,
-    session.sheet_id,
-    cacheKey,
-    Infinity
-  );
-
+  const cached = await getAnalysisCache(accessToken, sheetId, cacheKey, Infinity);
   let groups: { canonical: string; variants: string[] }[];
-
   if (cached?.status === "done" && cached.summary_json) {
     groups = JSON.parse(cached.summary_json);
   } else {
-    // Run AI normalisation
     groups = await normalizeItemNames(uniqueNames);
-
-    // Cache it
-    await upsertAnalysisCacheRow(
-      session.access_token,
-      session.sheet_id,
-      cacheKey,
-      "item_norm",
-      "done",
-      JSON.stringify(groups)
-    );
+    await upsertAnalysisCacheRow(accessToken, sheetId, cacheKey, "item_norm", "done", JSON.stringify(groups));
   }
 
-  const comparisons = buildComparisons(withItems, groups);
-  return NextResponse.json({ comparisons, total_items: uniqueNames.length });
+  return NextResponse.json({ comparisons: buildComparisons(withItems, groups), total_items: uniqueNames.length });
 }
