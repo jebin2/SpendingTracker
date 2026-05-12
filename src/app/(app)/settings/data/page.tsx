@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import type { Transaction } from "@/types";
 import { todayISO } from "@/lib/date/iso";
 import { useTransactions } from "@/hooks/useTransactions";
 
 export default function DataSettingsPage() {
   const router = useRouter();
+  const { data: session } = useSession();
   const { transactions } = useTransactions();
   const [exporting, setExporting] = useState(false);
   const [clearing, setClearing] = useState(false);
@@ -63,8 +65,8 @@ export default function DataSettingsPage() {
       label: "Open in Google Sheets",
       sub: "View raw data directly in your sheet",
       action: () => {
-        const url = localStorage.getItem("sheetUrl");
-        if (url) window.open(url, "_blank");
+        const id = session?.sheet_id;
+        if (id) window.open(`https://docs.google.com/spreadsheets/d/${id}/edit`, "_blank");
         else alert("No sheet connected");
       },
       loading: false,
