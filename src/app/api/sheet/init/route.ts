@@ -9,8 +9,6 @@ export async function POST() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  // sheet_id being present means the sheet exists (set during JWT callback at sign-in).
-  // We can't know isNew here anymore since init happens in the JWT callback.
-  // The dashboard will use this to decide if onboarding is needed.
-  return NextResponse.json({ isNew: false });
+  const sheetUrl = `https://docs.google.com/spreadsheets/d/${session.sheet_id}/edit`;
+  return NextResponse.json({ sheetId: session.sheet_id, sheetUrl, isNew: false });
 }
