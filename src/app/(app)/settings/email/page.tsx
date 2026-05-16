@@ -14,11 +14,13 @@ interface EmailStatus {
   emailsSkipped: number;
 }
 
+type JobState = "idle" | "running" | "done";
+
 export default function EmailImportSettingsPage() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [fetching, setFetching] = useState(false);
+  const [jobState, setJobState] = useState<JobState>("idle");
   const [status, setStatus] = useState<EmailStatus | null>(null);
   const [enabled, setEnabled] = useState(false);
   const [fromContains, setFromContains] = useState<string[]>([]);
@@ -26,22 +28,68 @@ export default function EmailImportSettingsPage() {
   const [filterInput, setFilterInput] = useState("");
   const [error, setError] = useState("");
   const filterInputRef = useRef<HTMLInputElement>(null);
+  const pollTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollCountRef = useRef(0);
+  const knownLastRunRef = useRef<string | null>(null);
 
-  const load = useCallback(async () => {
+  function stopPolling() {
+    if (pollTimerRef.current) {
+      clearInterval(pollTimerRef.current);
+      pollTimerRef.current = null;
+    }
+  }
+
+  const loadStatus = useCallback(async (): Promise<EmailStatus | null> => {
     try {
       const res = await fetch("/api/email/status");
-      if (!res.ok) return;
-      const data = await res.json() as EmailStatus;
+      if (!res.ok) return null;
+      return await res.json() as EmailStatus;
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const load = useCallback(async () => {
+    const data = await loadStatus();
+    if (data) {
       setStatus(data);
       setEnabled(data.enabled);
       setFromContains(data.fromContains);
       setDaysBack(data.daysBack);
-    } finally {
-      setLoading(false);
     }
-  }, []);
+    setLoading(false);
+  }, [loadStatus]);
 
   useEffect(() => { void load(); }, [load]);
+
+  // Cleanup polling on unmount
+  useEffect(() => () => stopPolling(), []);
+
+  function startPolling() {
+    stopPolling();
+    pollCountRef.current = 0;
+
+    pollTimerRef.current = setInterval(async () => {
+      pollCountRef.current++;
+      // Give up after 60 polls × 5 s = 5 minutes
+      if (pollCountRef.current > 60) {
+        stopPolling();
+        setJobState("idle");
+        return;
+      }
+
+      const data = await loadStatus();
+      if (!data) return;
+      setStatus(data);
+
+      // Job finished when lastRun changes from the value we captured at trigger time
+      if (data.lastRun && data.lastRun !== knownLastRunRef.current) {
+        stopPolling();
+        setJobState("done");
+        setTimeout(() => setJobState("idle"), 6000);
+      }
+    }, 5000);
+  }
 
   function addFilter() {
     const val = filterInput.trim().toLowerCase();
@@ -84,15 +132,22 @@ export default function EmailImportSettingsPage() {
 
   async function fetchNow() {
     if (fromContains.length === 0) { setError("Add at least one filter first."); return; }
-    setFetching(true);
     setError("");
+    // Snapshot the current lastRun so we can detect when the job finishes
+    knownLastRunRef.current = status?.lastRun ?? null;
+    setJobState("running");
+
     try {
-      await fetch("/api/email/fetch", { method: "POST" });
-      // Job runs in background — poll status after a short delay
-      setTimeout(() => { void load(); setFetching(false); }, 3000);
+      const res = await fetch("/api/email/fetch", { method: "POST" });
+      if (!res.ok) {
+        setJobState("idle");
+        setError("Could not trigger fetch — please try again.");
+        return;
+      }
+      startPolling();
     } catch {
-      setFetching(false);
-      setError("Could not trigger fetch.");
+      setJobState("idle");
+      setError("Network error — could not trigger fetch.");
     }
   }
 
@@ -127,7 +182,7 @@ export default function EmailImportSettingsPage() {
             <div className="flex-1">
               <p style={{ fontSize: 16, fontWeight: 600, color: "var(--color-on-surface)" }}>Auto-import from email</p>
               <p style={{ fontSize: 13, color: "var(--color-on-surface-variant)", marginTop: 4, lineHeight: 1.5 }}>
-                Emails are scanned nightly at midnight and matching transactions added automatically — no confirmation needed.
+                Emails are scanned daily and matching transactions added automatically — no confirmation needed.
               </p>
             </div>
             <button
@@ -230,6 +285,35 @@ export default function EmailImportSettingsPage() {
 
           {/* Status + Fetch now */}
           <div className="flex flex-col gap-3">
+
+            {/* Job running banner */}
+            {jobState === "running" && (
+              <div className="rounded-2xl p-4 flex items-start gap-3"
+                style={{ background: "var(--color-primary-fixed)", border: "1px solid var(--color-outline-variant)" }}>
+                <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin flex-shrink-0 mt-0.5"
+                  style={{ borderColor: "var(--color-primary-fixed-dim)", borderTopColor: "var(--color-primary)" }} />
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "var(--color-on-surface)" }}>Scanning emails…</p>
+                  <p style={{ fontSize: 13, color: "var(--color-on-surface-variant)", marginTop: 2, lineHeight: 1.5 }}>
+                    Running in background — this can take up to a few minutes. Stats will update automatically when done.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {/* Job done banner */}
+            {jobState === "done" && (
+              <div className="rounded-2xl p-4 flex items-center gap-3"
+                style={{ background: "var(--color-primary-fixed)", border: "1px solid var(--color-outline-variant)" }}>
+                <span className="material-symbols-outlined flex-shrink-0" style={{ color: "var(--color-primary)", fontSize: 22 }}>check_circle</span>
+                <div>
+                  <p style={{ fontSize: 14, fontWeight: 600, color: "var(--color-on-surface)" }}>Fetch complete</p>
+                  <p style={{ fontSize: 13, color: "var(--color-on-surface-variant)", marginTop: 2 }}>Stats have been updated below.</p>
+                </div>
+              </div>
+            )}
+
+            {/* Last run stats */}
             {status?.lastRun && (
               <div className="rounded-2xl p-4" style={{ background: "var(--color-surface-container-lowest)", border: "1px solid var(--color-outline-variant)" }}>
                 <p style={{ fontSize: 13, fontWeight: 600, color: "var(--color-on-surface)" }}>Last run</p>
@@ -247,12 +331,18 @@ export default function EmailImportSettingsPage() {
               </div>
             )}
 
-            <button onClick={fetchNow} disabled={fetching || fromContains.length === 0}
+            <button
+              onClick={fetchNow}
+              disabled={jobState !== "idle" || fromContains.length === 0}
               className="w-full py-4 rounded-2xl font-semibold flex items-center justify-center gap-2"
-              style={{ background: "var(--color-surface-container)", color: "var(--color-on-surface)", fontSize: 15, opacity: (fetching || fromContains.length === 0) ? 0.5 : 1 }}>
-              {fetching
-                ? <><div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--color-outline)", borderTopColor: "var(--color-on-surface)" }} />Starting…</>
-                : <><span className="material-symbols-outlined">download</span>Fetch now</>}
+              style={{
+                background: "var(--color-surface-container)",
+                color: "var(--color-on-surface)",
+                fontSize: 15,
+                opacity: (jobState !== "idle" || fromContains.length === 0) ? 0.5 : 1,
+              }}>
+              <span className="material-symbols-outlined">download</span>
+              {jobState === "running" ? "Fetch running…" : "Fetch now"}
             </button>
           </div>
 
@@ -260,7 +350,7 @@ export default function EmailImportSettingsPage() {
           <div className="rounded-2xl p-4 flex gap-3" style={{ background: "var(--color-primary-fixed)" }}>
             <span className="material-symbols-outlined flex-shrink-0" style={{ color: "var(--color-primary)", fontSize: 18 }}>info</span>
             <p style={{ fontSize: 13, color: "var(--color-primary)", lineHeight: 1.6 }}>
-              Only email text is read — images and attachments are never processed. Auto-runs daily at midnight.
+              Only email text is read — images and attachments are never processed. Runs automatically once per day when you open the app.
             </p>
           </div>
 
