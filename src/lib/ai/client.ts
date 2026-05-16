@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Set AI_PROVIDER=gemini in .env.local to switch; defaults to claude
-const PROVIDER = (process.env.AI_PROVIDER ?? "claude").toLowerCase();
+const PROVIDER = (process.env.AI_PROVIDER ?? "opencode").toLowerCase();
 
 const CLAUDE_MODEL = process.env.AI_MODEL ?? "claude-sonnet-4-6";
 const GEMINI_MODEL = process.env.AI_MODEL ?? "gemini-3-flash-preview";
