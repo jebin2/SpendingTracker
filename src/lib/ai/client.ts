@@ -126,6 +126,57 @@ async function opencodeText(prompt: string, system: string): Promise<string> {
   throw new Error("OpenCode task timed out after 120s");
 }
 
+// ── OpenCode image (OCR → text → OpenCode text AI) ───────────────────────────
+// Uses https://jebin2-ocr.hf.space to OCR the image, then feeds the extracted
+// text into opencodeText() with the original system prompt.
+
+const OCR_BASE_URL = "https://jebin2-ocr.hf.space";
+
+async function opencodeImage(
+  imageBase64: string,
+  mimeType: string,
+  text: string,
+  system: string,
+): Promise<string> {
+  // Step 1: upload image to OCR service
+  const blob = new Blob([Buffer.from(imageBase64, "base64")], { type: mimeType });
+  const form = new FormData();
+  form.append("image", blob, "receipt.jpg");
+
+  const uploadRes = await fetch(`${OCR_BASE_URL}/api/tasks/upload`, {
+    method: "POST",
+    body: form,
+  });
+  if (!uploadRes.ok) throw new Error(`OCR upload failed: ${uploadRes.status}`);
+  const { id: taskId } = await uploadRes.json() as { id: string };
+  if (!taskId) throw new Error("OCR upload returned no task ID");
+
+  // Step 2: poll for OCR result (result is a JSON string with a .text field)
+  let ocrText = "";
+  const deadline = Date.now() + 90_000;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 2000));
+    const pollRes = await fetch(`${OCR_BASE_URL}/api/tasks/${taskId}`);
+    if (!pollRes.ok) throw new Error(`OCR poll failed: ${pollRes.status}`);
+    const task = await pollRes.json() as { status: string; result?: string; error?: string };
+    if (task.status === "completed") {
+      try {
+        const parsed = JSON.parse(task.result ?? "{}") as { text?: string };
+        ocrText = parsed.text ?? "";
+      } catch {
+        ocrText = task.result ?? "";
+      }
+      break;
+    }
+    if (task.status === "failed") throw new Error(`OCR task failed: ${task.error}`);
+  }
+  if (!ocrText) throw new Error("OCR returned empty text");
+
+  // Step 3: send OCR text + original prompt to OpenCode text AI
+  const combined = [text, "---", "Text extracted from image:", ocrText].filter(Boolean).join("\n");
+  return opencodeText(combined, system);
+}
+
 // ── Provider chains ───────────────────────────────────────────────────────────
 
 type TextFn  = (prompt: string, system: string, maxTokens: number) => Promise<string>;
@@ -144,11 +195,12 @@ function textChain(): TextFn[] {
 }
 
 function imageChain(): ImageFn[] {
-  const claude: ImageFn = (b, m, t, s, tok) => claudeImage(b, m, t, s, tok);
-  const gemini: ImageFn = (b, m, t, s)      => geminiImage(b, m, t, s);
-  // OpenCode has no image support — omit from chain
-  if (PRIMARY === "gemini") return [gemini, claude];
-  return [claude, gemini];
+  const claude:    ImageFn = (b, m, t, s, tok) => claudeImage(b, m, t, s, tok);
+  const gemini:    ImageFn = (b, m, t, s)      => geminiImage(b, m, t, s);
+  const opencode:  ImageFn = (b, m, t, s)      => opencodeImage(b, m, t, s);
+  if (PRIMARY === "gemini")   return [gemini,   claude, opencode];
+  if (PRIMARY === "opencode") return [opencode, claude, gemini];
+  return                              [claude,   gemini, opencode];
 }
 
 async function runChain<T>(chain: Array<() => Promise<T>>, label: string, providers: string[]): Promise<T> {
@@ -191,8 +243,9 @@ export async function generateWithImage(
   maxTokens = 2048
 ): Promise<string> {
   const chain = imageChain();
-  // OpenCode has no image support — imageChain() always returns [claude, gemini] or [gemini, claude]
-  const providers = PRIMARY === "gemini" ? ["gemini", "claude"] : ["claude", "gemini"];
+  const providers = PRIMARY === "gemini"   ? ["gemini",   "claude", "opencode"]
+                  : PRIMARY === "opencode" ? ["opencode", "claude", "gemini"]
+                  :                          ["claude",   "gemini", "opencode"];
   return runChain(chain.map((fn) => () => fn(imageBase64, mimeType, text, system, maxTokens)), "image", providers);
 }
 
