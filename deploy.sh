@@ -167,13 +167,18 @@ PYEOF
     fi
   fi
 
-  # Add DNS route via cloudflared (idempotent — safe to run multiple times)
+  # Add DNS route via cloudflared — skip if already present
   if command -v cloudflared &>/dev/null; then
     TUNNEL_ID=$(grep -E '^tunnel:' "$CF_CONFIG" | awk '{print $2}' | tr -d '"' || true)
     if [ -n "$TUNNEL_ID" ]; then
-      cloudflared tunnel route dns "$TUNNEL_ID" "$DOMAIN" 2>/dev/null && \
-        info "DNS route added: $DOMAIN → tunnel $TUNNEL_ID" || \
-        warn "DNS route may already exist or needs manual setup in Cloudflare dashboard"
+      ROUTE_OUT=$(cloudflared tunnel route dns "$TUNNEL_ID" "$DOMAIN" 2>&1 || true)
+      if echo "$ROUTE_OUT" | grep -qi "already\|exist\|duplicate"; then
+        info "DNS route already exists — skipping"
+      elif echo "$ROUTE_OUT" | grep -qi "error\|fail"; then
+        warn "DNS route: $ROUTE_OUT"
+      else
+        info "DNS route added: $DOMAIN → tunnel $TUNNEL_ID"
+      fi
     fi
   fi
 fi
