@@ -24,18 +24,23 @@ export function ConfirmForm({ parsed, rawText, onBack }: ConfirmFormProps) {
 
   async function save() {
     setSaving(true);
-    const tx = {
-      id: crypto.randomUUID(),
-      date: form.date, time: form.time, amount: form.amount,
-      merchant: form.merchant, category: form.category,
-      subcategory: form.subcategory, item_name: form.item_name,
-      payment_method: form.payment_method,
-      source: "sms" as const, raw_input: rawText, status: "done" as const,
-    };
-    const res = await transactionsApi.create(tx);
-    setSaving(false);
-    if (res.ok) router.push("/transactions");
-    else alert("Failed to save");
+    try {
+      const tx = {
+        id: crypto.randomUUID(),
+        date: form.date, time: form.time, amount: form.amount,
+        merchant: form.merchant, category: form.category,
+        subcategory: form.subcategory, item_name: form.item_name,
+        payment_method: form.payment_method,
+        source: "sms" as const, raw_input: rawText, status: "done" as const,
+      };
+      const res = await transactionsApi.create(tx);
+      if (res.ok) router.push("/transactions");
+      else alert("Failed to save — please try again.");
+    } catch {
+      alert("Network error — please try again.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   function field(label: string, key: keyof ParsedTransaction, type = "text") {

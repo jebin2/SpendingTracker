@@ -55,35 +55,41 @@ export default function ImportPage() {
 
   async function handleImport() {
     setStep("importing");
-    const toImport = rows.filter((_, i) => selected.has(i));
+    setError("");
+    try {
+      const toImport = rows.filter((_, i) => selected.has(i));
 
-    // Batch into groups of 5 to stay within Sheets API rate limits while
-    // still being much faster than fully sequential (200 calls ≈ 100s).
-    const BATCH = 5;
-    for (let i = 0; i < toImport.length; i += BATCH) {
-      const batch = toImport.slice(i, i + BATCH);
-      await Promise.all(batch.map((row) => {
-        const now = new Date().toISOString();
-        const tx: Transaction = {
-          id: crypto.randomUUID(),
-          date: row.date,
-          time: "00:00",
-          amount: row.amount,
-          merchant: row.merchant,
-          category: row.category,
-          payment_method: (row.payment_method as PaymentMethod) || "Other",
-          notes: row.notes ?? undefined,
-          source: "manual",
-          created_at: now,
-          updated_at: now,
-          status: "done",
-        };
-        return transactionsApi.create(tx);
-      }));
+      // Batch into groups of 5 to stay within Sheets API rate limits while
+      // still being much faster than fully sequential (200 calls ≈ 100s).
+      const BATCH = 5;
+      for (let i = 0; i < toImport.length; i += BATCH) {
+        const batch = toImport.slice(i, i + BATCH);
+        await Promise.all(batch.map((row) => {
+          const now = new Date().toISOString();
+          const tx: Transaction = {
+            id: crypto.randomUUID(),
+            date: row.date,
+            time: "00:00",
+            amount: row.amount,
+            merchant: row.merchant,
+            category: row.category,
+            payment_method: (row.payment_method as PaymentMethod) || "Other",
+            notes: row.notes ?? undefined,
+            source: "manual",
+            created_at: now,
+            updated_at: now,
+            status: "done",
+          };
+          return transactionsApi.create(tx);
+        }));
+      }
+
+      setImportedCount(toImport.length);
+      setStep("done");
+    } catch {
+      setError("Import failed — please check your connection and try again.");
+      setStep("confirm");
     }
-
-    setImportedCount(toImport.length);
-    setStep("done");
   }
 
   if (step === "done") {
@@ -159,7 +165,13 @@ export default function ImportPage() {
           ))}
         </div>
 
-        <div className="fixed bottom-24 left-0 right-0 px-5 max-w-2xl mx-auto">
+        <div className="fixed bottom-24 left-0 right-0 px-5 max-w-2xl mx-auto flex flex-col gap-2">
+          {error && (
+            <p className="text-center text-sm rounded-xl py-2 px-3"
+              style={{ background: "var(--color-error-container)", color: "var(--color-on-error-container)" }}>
+              {error}
+            </p>
+          )}
           <button onClick={handleImport} disabled={selected.size === 0}
             className="w-full py-4 rounded-2xl font-semibold flex items-center justify-center gap-2"
             style={{ background: "var(--color-primary)", color: "var(--color-on-primary)", fontSize: 16, opacity: selected.size === 0 ? 0.5 : 1 }}>
