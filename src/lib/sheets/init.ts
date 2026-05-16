@@ -248,6 +248,7 @@ export async function resetSheet(
         "categories!A2:G",
         "analysis_cache!A2:G",
         "item_suggestions!A2:G",
+        "parsed_emails!A2:F",
         "meta!A2:B",
       ],
     },

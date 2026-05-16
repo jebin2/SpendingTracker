@@ -98,17 +98,33 @@ export default function EmailImportSettingsPage() {
   // Cleanup polling on unmount
   useEffect(() => () => stopPolling(), []);
 
+  async function saveFilters(newFilters: string[]) {
+    try {
+      await fetch("/api/email/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fromContains: newFilters }),
+      });
+    } catch {
+      setError("Network error — filter not saved.");
+    }
+  }
+
   function addFilter() {
     const val = filterInput.trim().toLowerCase();
     if (!val) return;
     if (fromContains.includes(val)) { setFilterInput(""); return; }
-    setFromContains((prev) => [...prev, val]);
+    const next = [...fromContains, val];
+    setFromContains(next);
     setFilterInput("");
     filterInputRef.current?.focus();
+    void saveFilters(next);
   }
 
   function removeFilter(f: string) {
-    setFromContains((prev) => prev.filter((x) => x !== f));
+    const next = fromContains.filter((x) => x !== f);
+    setFromContains(next);
+    void saveFilters(next);
   }
 
   async function save() {
@@ -118,7 +134,7 @@ export default function EmailImportSettingsPage() {
       const res = await fetch("/api/email/config", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fromContains, daysBack }),
+        body: JSON.stringify({ daysBack }),
       });
       if (!res.ok) {
         const d = await res.json();
@@ -253,13 +269,13 @@ export default function EmailImportSettingsPage() {
             </p>
           )}
 
-          {/* Save */}
+          {/* Save days-back */}
           <button onClick={save} disabled={saving}
             className="w-full py-4 rounded-2xl font-semibold flex items-center justify-center gap-2"
             style={{ background: "var(--color-primary)", color: "var(--color-on-primary)", fontSize: 16, opacity: saving ? 0.7 : 1 }}>
             {saving
               ? <><div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "rgba(255,255,255,0.4)", borderTopColor: "#fff" }} />Saving…</>
-              : <><span className="material-symbols-outlined">save</span>Save settings</>}
+              : <><span className="material-symbols-outlined">save</span>Save</>}
           </button>
 
           {/* Divider */}
@@ -301,8 +317,8 @@ export default function EmailImportSettingsPage() {
                 <p style={{ fontSize: 13, fontWeight: 600, color: "var(--color-on-surface)" }}>Last run</p>
                 <p style={{ fontSize: 13, color: "var(--color-on-surface-variant)", marginTop: 2 }}>{formatDate(status.lastRun)}</p>
                 <p style={{ fontSize: 13, color: "var(--color-on-surface-variant)", marginTop: 6 }}>
-                  {status.emailsScanned} emails scanned &nbsp;·&nbsp;
-                  {status.emailsParsed} transactions added &nbsp;·&nbsp;
+                  {status.emailsScanned} &nbsp;emails scanned &nbsp;·&nbsp;
+                  {status.emailsParsed} &nbsp;transactions added &nbsp;·&nbsp;
                   {status.emailsSkipped} skipped
                 </p>
                 {status.totalTxImported > 0 && (
