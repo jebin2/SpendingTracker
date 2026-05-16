@@ -198,7 +198,7 @@ export default function DashboardPage() {
         ) : (
           <div className="flex flex-col gap-2">
             {recent.map((tx) => (
-              <TransactionRow key={tx.id} tx={tx} subtitleMode="category-date" onClick={() => setSelectedTx(tx)} />
+              <TransactionRow key={tx.id} tx={tx} onClick={() => setSelectedTx(tx)} />
             ))}
           </div>
         )}

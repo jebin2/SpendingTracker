@@ -33,14 +33,12 @@ function StatusBadge({ status }: { status: TransactionStatus }) {
 
 interface TransactionRowProps {
   tx: Transaction;
-  /** "merchant-payment" (default) for transactions list; "category-date" for dashboard */
-  subtitleMode?: "merchant-payment" | "category-date";
   hasSuggestions?: boolean;
   onSuggestionsClick?: (e: React.MouseEvent) => void;
   onClick?: () => void;
 }
 
-export function TransactionRow({ tx, subtitleMode = "merchant-payment", hasSuggestions, onSuggestionsClick, onClick }: TransactionRowProps) {
+export function TransactionRow({ tx, hasSuggestions, onSuggestionsClick, onClick }: TransactionRowProps) {
   const isInFlight = tx.status === "queued" || tx.status === "processing";
   const isFailed = tx.status === "failed";
 
@@ -50,9 +48,7 @@ export function TransactionRow({ tx, subtitleMode = "merchant-payment", hasSugge
     ? "Receipt — parse failed"
     : (tx.item_name || tx.merchant);
 
-  const subtitle = subtitleMode === "category-date"
-    ? `${tx.category}${tx.date ? ` · ${tx.date}` : ""}`
-    : [tx.merchant !== "Unknown" ? tx.merchant : null, tx.payment_method].filter(Boolean).join(" · ");
+  const subtitle = [tx.merchant !== "Unknown" ? tx.merchant : null, tx.payment_method].filter(Boolean).join(" · ");
 
   const containerStyle = {
     background: isInFlight
