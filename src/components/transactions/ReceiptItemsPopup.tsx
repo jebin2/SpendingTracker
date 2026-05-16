@@ -1,41 +1,48 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import type { Transaction } from "@/types";
 import { formatINR } from "@/components/TransactionRow";
+import { useTransactionsStore } from "@/store/transactionsStore";
 import { getLocalTransactions } from "@/lib/offline";
+import { useEffect, useState } from "react";
 
 export function ReceiptItemsPopup({ receiptId, onClose }: { receiptId: string; onClose: () => void }) {
-  const [items, setItems] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
+  // Try the already-loaded store first (covers all loaded pages, no network needed)
+  const storeTransactions = useTransactionsStore((s) => s.transactions);
+
+  const storeItems = useMemo(
+    () => storeTransactions
+      .filter((t) => t.receipt_id === receiptId)
+      .sort((a, b) => a.item_name?.localeCompare(b.item_name ?? "") ?? 0),
+    [storeTransactions, receiptId]
+  );
+
+  // If the store has the items, use them directly — no loading state needed
+  const [extraItems, setExtraItems] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(storeItems.length === 0);
   const [fromCache, setFromCache] = useState(false);
 
   useEffect(() => {
+    // Only fetch from IndexedDB if the store has no matching items
+    // (e.g., receipt created before the user loaded this session's pages)
+    if (storeItems.length > 0) return;
+
     (async () => {
       try {
-        const r = await fetch("/api/transactions");
-        const d = await r.json();
-        const all: Transaction[] = d.transactions ?? [];
-        setItems(
-          all
-            .filter((t) => t.receipt_id === receiptId)
-            .sort((a, b) => a.item_name?.localeCompare(b.item_name ?? "") ?? 0)
-        );
-      } catch {
-        // Offline — read from local cache
         const cached = await getLocalTransactions();
-        setItems(
-          cached
-            .filter((t) => t.receipt_id === receiptId)
-            .sort((a, b) => a.item_name?.localeCompare(b.item_name ?? "") ?? 0)
-        );
-        setFromCache(true);
+        const found = cached
+          .filter((t) => t.receipt_id === receiptId)
+          .sort((a, b) => a.item_name?.localeCompare(b.item_name ?? "") ?? 0);
+        setExtraItems(found);
+        if (found.length > 0) setFromCache(true);
       } finally {
         setLoading(false);
       }
     })();
-  }, [receiptId]);
+  }, [receiptId, storeItems.length]);
 
+  const items = storeItems.length > 0 ? storeItems : extraItems;
   const total = items.reduce((s, t) => s + t.amount, 0);
 
   return (
@@ -50,7 +57,7 @@ export function ReceiptItemsPopup({ receiptId, onClose }: { receiptId: string; o
             {!loading && (
               <p style={{ fontSize: 13, color: "var(--color-on-surface-variant)" }}>
                 {items.length} items · {formatINR(total)} total
-                {fromCache && " · cached"}
+                {fromCache && " · from cache"}
               </p>
             )}
           </div>
