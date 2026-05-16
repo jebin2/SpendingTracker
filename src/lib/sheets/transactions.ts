@@ -110,6 +110,8 @@ export async function getTransactions(
   return { transactions, total, hasMore };
 }
 
+// Only searches the most recent page — safe for recently-created rows
+// (e.g. receipt placeholders). Do not use to look up arbitrary old transactions.
 export async function getTransactionById(
   accessToken: string,
   sheetId: string,

@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { withSession } from "@/server/http/withSession";
-import Anthropic, { toFile } from "@anthropic-ai/sdk";
+import Anthropic from "@anthropic-ai/sdk";
 import type { ContentBlockParam } from "@anthropic-ai/sdk/resources/messages";
-void toFile; // imported for tree-shaking purposes only
 import { todayISO } from "@/lib/date/iso";
 
 const SYSTEM_PROMPT = `You are a bank statement parser for an Indian spending tracker.
