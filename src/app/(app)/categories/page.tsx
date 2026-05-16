@@ -50,23 +50,30 @@ export default function CategoriesPage() {
       created_at: new Date().toISOString(),
     };
     try {
-      await fetch("/api/categories", {
+      const res = await fetch("/api/categories", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newCat),
       });
+      if (!res.ok) throw new Error("Save failed");
       setCustomCategories((prev) => [...prev, newCat]);
       setNewName("");
       setNewIcon("📦");
       setShowForm(false);
+    } catch {
+      // Keep form open so user can retry
     } finally {
       setSaving(false);
     }
   }
 
   async function deleteCategory(id: string) {
-    await fetch(`/api/categories/${id}`, { method: "DELETE" });
-    setCustomCategories((prev) => prev.filter((c) => c.id !== id));
+    try {
+      await fetch(`/api/categories/${id}`, { method: "DELETE" });
+      setCustomCategories((prev) => prev.filter((c) => c.id !== id));
+    } catch {
+      // Silently ignore — optimistic delete would have been fine anyway
+    }
   }
 
   return (
