@@ -1,5 +1,6 @@
 import { getMetaValues, setMetaValue } from "@/lib/sheets";
-import { runEmailImportJob, readEmailImportConfig } from "@/server/jobs/emailImportJob";
+import { runEmailImportJob } from "@/server/jobs/emailImportJob";
+import { safeJsonParse } from "@/lib/safeJson";
 import type { SheetSession } from "./types";
 
 export type EmailImportConfigUpdate = {
@@ -28,15 +29,11 @@ export async function saveEmailImportConfig(
 }
 
 export async function getEmailImportStatus(session: SheetSession) {
-  const [config, meta] = await Promise.all([
-    readEmailImportConfig(session),
-    getMetaValues(session.accessToken, session.sheetId),
-  ]);
-
+  const meta = await getMetaValues(session.accessToken, session.sheetId);
   return {
-    enabled: config.enabled,
-    fromContains: config.fromContains,
-    daysBack: config.daysBack,
+    enabled: meta.email_import_enabled === "true",
+    fromContains: safeJsonParse<string[]>(meta.email_import_from_contains ?? null, []),
+    daysBack: meta.email_import_days_back ? parseInt(meta.email_import_days_back) : 7,
     lastRun: meta.email_import_last_run ?? null,
     totalTxImported: parseInt(meta.email_import_tx_count ?? "0") || 0,
   };

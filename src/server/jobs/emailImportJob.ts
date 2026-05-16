@@ -22,6 +22,8 @@ export interface EmailImportConfig {
   fromContains: string[];  // substring filters — at least one required
   daysBack: number;
   region: string;
+  lastRun?: string;
+  txCount: number;
 }
 
 export async function readEmailImportConfig(session: SheetSession): Promise<EmailImportConfig> {
@@ -31,6 +33,8 @@ export async function readEmailImportConfig(session: SheetSession): Promise<Emai
     fromContains: safeJsonParse<string[]>(meta.email_import_from_contains ?? null, []),
     daysBack: meta.email_import_days_back ? parseInt(meta.email_import_days_back) : 7,
     region: meta.region ?? "",
+    lastRun: meta.email_import_last_run || undefined,
+    txCount: parseInt(meta.email_import_tx_count ?? "0") || 0,
   };
 }
 
@@ -136,11 +140,8 @@ export async function runEmailImportJob(session: SheetSession): Promise<EmailImp
     return { scanned: 0, imported: 0, skipped: 0, failed: 0 };
   }
 
-  const meta = await getMetaValues(session.accessToken, session.sheetId);
-  const lastRun = meta.email_import_last_run || undefined;
-
   const gmail = getGmailClient(session.accessToken);
-  const query = buildGmailQuery(config.fromContains, config.daysBack, lastRun);
+  const query = buildGmailQuery(config.fromContains, config.daysBack, config.lastRun);
 
   // Fetch message IDs matching the query (max 100 per run)
   let messageIds: string[] = [];
@@ -245,10 +246,9 @@ export async function runEmailImportJob(session: SheetSession): Promise<EmailImp
   await deduplicateNewTransactions(session, newTxIds).catch(() => {});
 
   // Update last_run and cumulative count
-  const prevCount = parseInt(meta.email_import_tx_count ?? "0") || 0;
   await Promise.all([
     setMetaValue(session.accessToken, session.sheetId, "email_import_last_run", new Date().toISOString()),
-    setMetaValue(session.accessToken, session.sheetId, "email_import_tx_count", String(prevCount + result.imported)),
+    setMetaValue(session.accessToken, session.sheetId, "email_import_tx_count", String(config.txCount + result.imported)),
   ]).catch(() => {});
 
   return result;
