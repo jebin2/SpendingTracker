@@ -108,7 +108,6 @@ server {
     listen 80;
     server_name ${DOMAIN:-_};
 
-    # Pass requests to Next.js
     location / {
         proxy_pass         http://127.0.0.1:$PORT;
         proxy_http_version 1.1;
@@ -119,21 +118,20 @@ server {
         proxy_set_header   X-Forwarded-For \$proxy_add_x_forwarded_for;
         proxy_set_header   X-Forwarded-Proto \$scheme;
         proxy_cache_bypass \$http_upgrade;
-        # Long timeout for background job fire-and-forget responses
         proxy_read_timeout 60s;
     }
 }
 NGINX
 
-  # Enable site (Debian/Ubuntu style)
+  # Enable site — symlink into sites-enabled (Debian/Ubuntu style).
+  # Never touch other sites' configs (e.g. opencode.voidall.com).
   if [ -d /etc/nginx/sites-enabled ]; then
     sudo ln -sf "$NGINX_CONF" "$NGINX_ENABLED"
-    # Remove default site if it exists
-    sudo rm -f /etc/nginx/sites-enabled/default
   fi
 
   sudo nginx -t && sudo systemctl reload nginx && sudo systemctl enable nginx
-  info "Nginx configured → proxying $DOMAIN → port $PORT"
+  info "Nginx configured → $DOMAIN → 127.0.0.1:$PORT"
+  info "Existing sites (opencode etc.) are untouched"
 fi
 
 # ── 8. SSL with Certbot ───────────────────────────────────────────────────────
