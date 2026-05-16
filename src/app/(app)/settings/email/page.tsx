@@ -139,7 +139,7 @@ export default function EmailImportSettingsPage() {
     setJobState("running");
 
     try {
-      const res = await fetch("/api/email/fetch", { method: "POST" });
+      const res = await fetch("/api/email/fetch?manual=1", { method: "POST" });
       if (!res.ok) {
         setJobState("idle");
         setError("Could not trigger fetch — please try again.");
@@ -232,7 +232,7 @@ export default function EmailImportSettingsPage() {
             <div className="rounded-2xl border p-4 flex items-center gap-4"
               style={{ borderColor: "var(--color-outline-variant)", background: "var(--color-surface-container-lowest)" }}>
               <p style={{ fontSize: 14, color: "var(--color-on-surface-variant)", flex: 1 }}>
-                Only applies on first run. After that, only new emails are fetched.
+                Used on first run and every manual "Fetch now". Auto daily sync only fetches new emails since last run.
               </p>
               <input
                 type="number"

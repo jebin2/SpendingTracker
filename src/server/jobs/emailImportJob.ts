@@ -133,7 +133,7 @@ export interface EmailImportResult {
   failed: number;
 }
 
-export async function runEmailImportJob(session: SheetSession): Promise<EmailImportResult> {
+export async function runEmailImportJob(session: SheetSession, { manual = false } = {}): Promise<EmailImportResult> {
   const config = await readEmailImportConfig(session);
 
   if (config.fromContains.length === 0) {
@@ -145,7 +145,9 @@ export async function runEmailImportJob(session: SheetSession): Promise<EmailImp
 
   try {
   const gmail = getGmailClient(session.accessToken);
-  const query = buildGmailQuery(config.fromContains, config.daysBack, config.lastRun);
+  // Manual fetch always uses daysBack so the user gets the lookback they configured.
+  // Auto daily trigger uses lastRun so only new emails are fetched.
+  const query = buildGmailQuery(config.fromContains, config.daysBack, manual ? undefined : config.lastRun);
 
   // Fetch message IDs matching the query (max 100 per run)
   let messageIds: string[] = [];

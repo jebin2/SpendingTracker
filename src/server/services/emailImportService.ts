@@ -37,8 +37,8 @@ export async function getEmailImportStatus(session: SheetSession) {
 
 // Trigger the email import job as a fire-and-forget background task.
 // Returns immediately; job runs asynchronously.
-export function requestEmailImport(session: SheetSession): void {
-  runEmailImportJob(session).catch((err) => {
+export function requestEmailImport(session: SheetSession, { manual = false } = {}): void {
+  runEmailImportJob(session, { manual }).catch((err) => {
     console.error("Email import job failed:", err);
   });
 }
