@@ -4,7 +4,7 @@ import {
   appendItemSuggestions,
   getItemSuggestions,
   getMetaValues,
-  getTransactions,
+  getAllTransactions,
   setMetaValue,
   type ItemSuggestion,
 } from "@/lib/sheets";
@@ -34,7 +34,7 @@ function processedNoteKeys(suggestions: ItemSuggestion[]): Set<string> {
 export async function runItemNormalization(session: SheetSession): Promise<void> {
   try {
     const [transactions, existing] = await Promise.all([
-      getTransactions(session.accessToken, session.sheetId),
+      getAllTransactions(session.accessToken, session.sheetId),
       getItemSuggestions(session.accessToken, session.sheetId),
     ]);
 

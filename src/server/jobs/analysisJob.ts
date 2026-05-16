@@ -1,6 +1,6 @@
 import { analyzeSpending } from "@/lib/ai/analyze";
 import { getPeriodRange } from "@/lib/date/periods";
-import { getTransactions, storeAnalysisInDrive, upsertAnalysisCacheRow } from "@/lib/sheets";
+import { getAllTransactions, storeAnalysisInDrive, upsertAnalysisCacheRow } from "@/lib/sheets";
 import type { SheetSession } from "@/server/services/types";
 
 const ANALYSIS_CELL_LIMIT = 40000;
@@ -13,7 +13,7 @@ export async function runAnalysisJob(
 ): Promise<void> {
   const { from, to, label } = getPeriodRange(period);
   try {
-    const allTx = await getTransactions(session.accessToken, session.sheetId);
+    const allTx = await getAllTransactions(session.accessToken, session.sheetId);
     const filtered = allTx.filter((t) => t.date >= from && t.date <= to);
     const result = await analyzeSpending(filtered, label, region, lifestyleTags);
     const json = JSON.stringify(result);

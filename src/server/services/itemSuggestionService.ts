@@ -1,6 +1,6 @@
 import {
   getItemSuggestions,
-  getTransactions,
+  getAllTransactions,
   resolveItemSuggestion,
   updateTransactionField,
 } from "@/lib/sheets";
@@ -16,7 +16,7 @@ interface ResolveSuggestionRequest {
 export async function getPendingSuggestions(session: SheetSession): Promise<PendingSuggestion[]> {
   const [suggestions, transactions] = await Promise.all([
     getItemSuggestions(session.accessToken, session.sheetId),
-    getTransactions(session.accessToken, session.sheetId),
+    getAllTransactions(session.accessToken, session.sheetId),
   ]);
 
   return suggestions
@@ -48,7 +48,7 @@ export async function resolvePendingSuggestion(
     const suggestion = suggestions.find((item) => item.key === request.key && item.field === request.field);
 
     if (suggestion) {
-      const transactions = await getTransactions(session.accessToken, session.sheetId);
+      const transactions = await getAllTransactions(session.accessToken, session.sheetId);
 
       if (suggestion.source === "normalize") {
         const toUpdate = transactions.filter(

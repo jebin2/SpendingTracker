@@ -1,5 +1,6 @@
 export { initSpendingSheet, resetSheet } from "./init";
-export { appendTransaction, getTransactions, getTransactionById, updateTransactionField } from "./transactions";
+export { appendTransaction, getTransactions, getAllTransactions, getTransactionById, updateTransactionField, PAGE_SIZE } from "./transactions";
+export type { TransactionPage } from "./transactions";
 export { getCategories } from "./categories";
 export { getMetaValues, setMetaValue } from "./meta";
 export { getOrCreateReceiptsFolder, uploadReceiptToDrive, downloadReceiptFromDrive } from "./drive";

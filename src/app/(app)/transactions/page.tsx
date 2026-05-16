@@ -21,11 +21,12 @@ import { TransactionGroups } from "@/features/transactions/components/Transactio
 import { DuplicateGroupsList } from "@/features/transactions/components/DuplicateGroupsList";
 import { SuggestionsSheet } from "@/features/transactions/components/SuggestionsSheet";
 import { DuplicateGroupSheet } from "@/features/transactions/components/DuplicateGroupSheet";
+import { receiptsApi } from "@/lib/api/receipts";
 
 function TransactionsContent() {
   const searchParams = useSearchParams();
   const isOnline = useOnlineStatus();
-  const { transactions, refresh } = useTransactions();
+  const { transactions, total, hasMore, syncing, loadingMore, refresh, loadMore } = useTransactions();
   const [loading, setLoading] = useState(transactions.length === 0);
   const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const [search, setSearch] = useState("");
@@ -65,7 +66,14 @@ function TransactionsContent() {
 
   return (
     <div className="max-w-2xl mx-auto px-5 pt-6 pb-8 flex flex-col gap-4">
-      <h1 className="hidden md:block font-bold" style={{ fontSize: 24, color: "var(--color-on-background)" }}>Transactions</h1>
+      <div className="hidden md:flex items-center justify-between">
+        <h1 className="font-bold" style={{ fontSize: 24, color: "var(--color-on-background)" }}>Transactions</h1>
+        {total > 0 && (
+          <span style={{ fontSize: 13, color: "var(--color-on-surface-variant)" }}>
+            {transactions.length} of {total}
+          </span>
+        )}
+      </div>
 
       <InFlightReceiptBanner count={inFlightCount} />
 
@@ -96,23 +104,49 @@ function TransactionsContent() {
           onGroupClick={setActiveDupGroup}
         />
       ) : (
-        <TransactionGroups
-          sortedDates={sortedDates}
-          groups={groups}
-          suggestions={suggestions}
-          onSuggestionsClick={setActiveSuggTxId}
-          onTransactionClick={setSelectedTx}
-          onResolveDuplicate={resolveDuplicate}
-          searchActive={!!search}
-          onRetryReceipt={async (txId) => {
-            await fetch("/api/receipts/process", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ txId, region }),
-            });
-            loadData();
-          }}
-        />
+        <>
+          <TransactionGroups
+            sortedDates={sortedDates}
+            groups={groups}
+            suggestions={suggestions}
+            onSuggestionsClick={setActiveSuggTxId}
+            onTransactionClick={setSelectedTx}
+            onResolveDuplicate={resolveDuplicate}
+            searchActive={!!search}
+            onRetryReceipt={async (txId) => {
+              await receiptsApi.process(txId, region);
+              loadData();
+            }}
+          />
+
+          {/* Load more — only shown when no active filters (filters work on loaded data) */}
+          {hasMore && !search && !filterCat && !datePreset && !showDupsOnly && (
+            <button
+              onClick={loadMore}
+              disabled={loadingMore || syncing}
+              className="w-full py-3.5 rounded-2xl font-medium flex items-center justify-center gap-2"
+              style={{
+                background: "var(--color-surface-container)",
+                color: "var(--color-on-surface-variant)",
+                fontSize: 14,
+                opacity: loadingMore || syncing ? 0.6 : 1,
+              }}
+            >
+              {loadingMore ? (
+                <>
+                  <div className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin"
+                    style={{ borderColor: "var(--color-outline)", borderTopColor: "var(--color-on-surface-variant)" }} />
+                  Loading…
+                </>
+              ) : (
+                <>
+                  <span className="material-symbols-outlined" style={{ fontSize: 18 }}>expand_more</span>
+                  Load older transactions ({total - transactions.length} more)
+                </>
+              )}
+            </button>
+          )}
+        </>
       )}
 
       {activeSuggTxId && (

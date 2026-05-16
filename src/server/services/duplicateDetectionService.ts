@@ -1,5 +1,5 @@
 import { findDuplicates } from "@/lib/ai/dedup";
-import { getMetaValues, getTransactions, setMetaValue, updateTransactionField } from "@/lib/sheets";
+import { getMetaValues, getAllTransactions, setMetaValue, updateTransactionField } from "@/lib/sheets";
 import type { SheetSession } from "./types";
 
 const RUN_INTERVAL_MS = 60 * 60 * 1000;
@@ -16,7 +16,7 @@ function isAiUnavailableError(err: unknown): boolean {
 }
 
 export async function runDuplicateDetection(session: SheetSession): Promise<void> {
-  const transactions = await getTransactions(session.accessToken, session.sheetId);
+  const transactions = await getAllTransactions(session.accessToken, session.sheetId);
   const previousDuplicates = transactions.filter((tx) => tx.is_duplicate);
 
   await Promise.all(

@@ -1,23 +1,29 @@
 "use client";
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useTransactionsStore } from "@/store/transactionsStore";
 import { pullTransactions } from "@/lib/offline";
 
 export function useTransactions() {
-  const transactions = useTransactionsStore((s) => s.transactions);
-  const setTransactions = useTransactionsStore((s) => s.setTransactions);
-  const syncing = useTransactionsStore((s) => s.syncing);
-  const setSyncing = useTransactionsStore((s) => s.setSyncing);
+  const transactions  = useTransactionsStore((s) => s.transactions);
+  const total         = useTransactionsStore((s) => s.total);
+  const hasMore       = useTransactionsStore((s) => s.hasMore);
+  const syncing       = useTransactionsStore((s) => s.syncing);
+  const loadingMore   = useTransactionsStore((s) => s.loadingMore);
+  const { setTransactions, mergeTransactions, setSyncing, setLoadingMore } = useTransactionsStore();
 
+  const currentPageRef = useRef(1);
+
+  // Full refresh — replaces store with page 1
   const refresh = useCallback(async () => {
     if (useTransactionsStore.getState().syncing) {
       return useTransactionsStore.getState().transactions;
     }
     setSyncing(true);
     try {
-      const txs = await pullTransactions();
-      setTransactions(txs);
+      const { transactions: txs, total: t, hasMore: hm } = await pullTransactions(1);
+      setTransactions(txs, t, hm);
+      currentPageRef.current = 1;
       return txs;
     } catch {
       return useTransactionsStore.getState().transactions;
@@ -26,5 +32,21 @@ export function useTransactions() {
     }
   }, [setTransactions, setSyncing]);
 
-  return { transactions, refresh, syncing };
+  // Load the next page and merge into the store
+  const loadMore = useCallback(async () => {
+    if (loadingMore || !useTransactionsStore.getState().hasMore) return;
+    setLoadingMore(true);
+    try {
+      const nextPage = currentPageRef.current + 1;
+      const { transactions: txs, total: t, hasMore: hm } = await pullTransactions(nextPage);
+      mergeTransactions(txs, t, hm);
+      currentPageRef.current = nextPage;
+    } catch {
+      // silently ignore — user can retry
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, mergeTransactions, setLoadingMore]);
+
+  return { transactions, total, hasMore, syncing, loadingMore, refresh, loadMore };
 }

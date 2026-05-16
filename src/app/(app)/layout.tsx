@@ -98,8 +98,8 @@ function AppShell({
     }
     // 2. Pull latest transaction data
     try {
-      const txs = await pullTransactions();
-      setTransactions(txs);
+      const { transactions: txs, total, hasMore } = await pullTransactions(1);
+      setTransactions(txs, total, hasMore);
     } catch {
       // Network unavailable — silently ignore
     }

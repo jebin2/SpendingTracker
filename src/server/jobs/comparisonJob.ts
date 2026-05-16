@@ -1,6 +1,6 @@
 import { compareMerchants } from "@/lib/ai/compare";
 import { getPeriodRange } from "@/lib/date/periods";
-import { getTransactions, storeAnalysisInDrive, upsertAnalysisCacheRow } from "@/lib/sheets";
+import { getAllTransactions, storeAnalysisInDrive, upsertAnalysisCacheRow } from "@/lib/sheets";
 import { compareKey } from "@/server/services/comparisonService";
 import type { SheetSession } from "@/server/services/types";
 
@@ -15,7 +15,7 @@ export async function runComparisonJob(
   const key = compareKey(merchants, period);
   try {
     const { from, to } = getPeriodRange(period);
-    const allTx = await getTransactions(session.accessToken, session.sheetId);
+    const allTx = await getAllTransactions(session.accessToken, session.sheetId);
     const filtered = allTx.filter((t) => t.date >= from && t.date <= to);
     const result = await compareMerchants(merchants, filtered, period, region);
     const json = JSON.stringify(result);

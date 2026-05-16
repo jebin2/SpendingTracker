@@ -18,8 +18,8 @@ export function useSyncEffect() {
     if (useTransactionsStore.getState().syncing) return;
     setSyncing(true);
     try {
-      const txs = await pullTransactions();
-      setTransactions(txs);
+      const { transactions, total, hasMore } = await pullTransactions(1);
+      setTransactions(transactions, total, hasMore);
     } catch (err) {
       if (err instanceof Error && err.message === "auth_expired") return;
     } finally {
@@ -45,7 +45,8 @@ export function useSyncEffect() {
     (async () => {
       try {
         const localTxs = await getLocalTransactions();
-        if (localTxs.length > 0) setTransactions(localTxs);
+        // Local cache has no total/hasMore metadata — set conservatively
+        if (localTxs.length > 0) setTransactions(localTxs, localTxs.length, false);
         const count = await pendingCount();
         if (count > 0) setPendingCount(count);
       } catch (err) {

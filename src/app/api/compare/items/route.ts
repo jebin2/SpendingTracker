@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { withSession } from "@/server/http/withSession";
-import { getTransactions, getAnalysisCache, upsertAnalysisCacheRow } from "@/lib/sheets";
+import { getAllTransactions, getAnalysisCache, upsertAnalysisCacheRow } from "@/lib/sheets";
 import { normalizeItemNames } from "@/lib/ai/normalize-items";
 import type { ItemPriceComparison } from "@/types";
 
@@ -50,7 +50,7 @@ function buildComparisons(
 export const GET = withSession("GET compare items", async (session) => {
   const { accessToken, sheetId } = session;
 
-  const allTx = await getTransactions(accessToken, sheetId);
+  const allTx = await getAllTransactions(accessToken, sheetId);
   const withItems = allTx.filter((t) => t.item_name && t.amount > 0);
   if (withItems.length === 0) return NextResponse.json({ comparisons: [], total_items: 0 });
 
