@@ -2,42 +2,40 @@ import { generateText } from "./client";
 import { tryParseAiJson } from "./parseJson";
 import type { ParsedTransaction, PaymentMethod } from "@/types";
 
-import { SYSTEM_PROMPT as BANK_DEBIT_PROMPT }   from "./prompts/email-bank-debit";
-import { SYSTEM_PROMPT as PAYMENT_APP_PROMPT }   from "./prompts/email-payment-app";
-import { SYSTEM_PROMPT as ECOMMERCE_PROMPT }     from "./prompts/email-ecommerce";
-import { SYSTEM_PROMPT as CREDIT_CARD_PROMPT }   from "./prompts/email-credit-card";
-import { SYSTEM_PROMPT as GENERIC_PROMPT }       from "./prompts/email-generic";
+const EMAIL_SYSTEM_PROMPT = `You are a financial transaction extractor for Indian payment-related emails.
 
-// ── Category detection ────────────────────────────────────────────────────────
+Extract ONLY debit transactions — money leaving the user's account (purchases, bills, transfers out).
+Ignore: credit transactions, refunds, incoming transfers, balance alerts, reward points, promotional emails.
 
-type EmailCategory = "bank-debit" | "payment-app" | "ecommerce" | "credit-card" | "generic";
+Rules:
+- amount: the actual amount PAID/DEBITED in INR (positive number). Never extract "available balance", "MRP", "you saved", or reward points.
+- merchant: the payee or store name. Clean up technical strings: "UPI/SWIGGY/123456" → "Swiggy", "POS/AMAZON.IN" → "Amazon", VPA "merchant@upi" → "Merchant".
+- For bank-to-person transfers (NEFT/IMPS/RTGS to an individual), merchant = recipient name, category = "Others".
+- category: classify the spend honestly. Options: Food & Dining, Transport, Shopping, Entertainment, Health, Bills & Utilities, Education, Personal Care, Gifts & Donations, Others.
+- payment_method: UPI | Card | NetBanking | Cash | Other.
+- date: YYYY-MM-DD format. Extract the transaction date, not the email date.
+- time: HH:MM (24h). Use "00:00" if not present.
+- confidence: 0–1. Set < 0.65 if amount, merchant, or date is ambiguous.
+- uncertain_fields: list any fields you're not sure about.
 
-function detectCategory(from: string, subject: string): EmailCategory {
-  const f = from.toLowerCase();
-  const s = subject.toLowerCase();
+Return null (not JSON) if:
+- This is a credit / incoming transaction
+- No clear debit amount is present
+- Merchant cannot be determined
+- It's a promotional, newsletter, or non-transaction email
+- You are not confident (confidence would be < 0.65)
 
-  if (/hdfcbank|icicibank|sbi\.co\.in|axisbank|kotak|yesbank|indusind|idfcfirst|federalbank|rblbank/.test(f)) {
-    // Distinguish credit-card alert vs bank debit alert
-    if (/credit\s*card|creditcard|card\s*alert|cc\s*alert/.test(f + " " + s)) return "credit-card";
-    return "bank-debit";
-  }
-  if (/gpay|google.*pay|phonepe|paytm|bhim|razorpay|cashfree|mobikwik/.test(f)) return "payment-app";
-  if (/swiggy|zomato|amazon|flipkart|bigbasket|blinkit|myntra|ajio|nykaa|meesho|jiomart|dunzo|zepto|ola\.money|uber/.test(f)) return "ecommerce";
-  if (/sbicard|hdfccc|icicicredit|axiscard|kotakcard|amex|americanexpress/.test(f)) return "credit-card";
-  if (/creditcard|credit-card/.test(f + " " + s)) return "credit-card";
-
-  return "generic";
-}
-
-function promptForCategory(cat: EmailCategory): string {
-  switch (cat) {
-    case "bank-debit":   return BANK_DEBIT_PROMPT;
-    case "payment-app":  return PAYMENT_APP_PROMPT;
-    case "ecommerce":    return ECOMMERCE_PROMPT;
-    case "credit-card":  return CREDIT_CARD_PROMPT;
-    default:             return GENERIC_PROMPT;
-  }
-}
+Respond with valid JSON only (no markdown, no explanation):
+{
+  "amount": number,
+  "merchant": string,
+  "category": string,
+  "payment_method": string,
+  "date": "YYYY-MM-DD",
+  "time": "HH:MM",
+  "confidence": number,
+  "uncertain_fields": string[]
+}`;
 
 // ── HTML / text extraction ────────────────────────────────────────────────────
 
@@ -166,23 +164,20 @@ export async function parseEmailTransaction(
   // 2. Signal check (fast, no AI)
   if (!hasTransactionSignal(emailText)) return { transaction: null, skipReason: "no_signal" };
 
-  // 3. Pick prompt
-  const category = detectCategory(from, subject);
-  const systemPrompt = promptForCategory(category);
-
+  // 3. Build user prompt
   const userPrompt = [
     region ? `User is in ${region}.` : "",
     `Today's date is ${todayDate}.`,
     `From: ${from}`,
     `Subject: ${subject}`,
     `---`,
-    emailText.slice(0, 4000), // cap at 4k chars to stay within token budget
+    emailText.slice(0, 4000),
   ].filter(Boolean).join("\n");
 
   // 4. AI call
   let raw: string;
   try {
-    raw = await generateText(userPrompt, systemPrompt, 512);
+    raw = await generateText(userPrompt, EMAIL_SYSTEM_PROMPT, 512);
   } catch {
     return { transaction: null, skipReason: "parse_error" };
   }
