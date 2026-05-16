@@ -17,22 +17,28 @@ echo ""
 echo "  FundsFlee — VPS deploy (Cloudflare Tunnel)"
 echo "  ─────────────────────────────────────────"
 
-# ── 1. Node.js ────────────────────────────────────────────────────────────────
+# ── 1. Node.js (>=20.9.0 required by Next.js) ────────────────────────────────
 step "Node.js"
-if ! command -v node &>/dev/null; then
-  # Try loading nvm first (may already be installed)
-  export NVM_DIR="$HOME/.nvm"
-  [ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+
+# Load nvm if available
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && source "$NVM_DIR/nvm.sh"
+
+# Check version — major must be >= 20
+NODE_MAJOR=$(node -e "process.exit(parseInt(process.version.slice(1)))" 2>/dev/null; echo $? || echo 0)
+NODE_MAJOR=$(node -e "console.log(parseInt(process.version.slice(1)))" 2>/dev/null || echo 0)
+
+if [ "$NODE_MAJOR" -lt 20 ] 2>/dev/null; then
+  warn "Node.js $(node -v 2>/dev/null || echo 'not found') is too old — Next.js requires >=20.9.0. Upgrading via nvm..."
+  if ! command -v nvm &>/dev/null; then
+    curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+    source "$NVM_DIR/nvm.sh"
+  fi
+  nvm install 20
+  nvm use 20
+  nvm alias default 20
 fi
-if ! command -v node &>/dev/null; then
-  warn "Node.js not found — installing via nvm..."
-  curl -fsSL https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
-  export NVM_DIR="$HOME/.nvm"
-  # shellcheck source=/dev/null
-  source "$NVM_DIR/nvm.sh"
-  nvm install --lts
-  nvm use --lts
-fi
+
 info "Node.js $(node -v)"
 
 # ── 2. PM2 ────────────────────────────────────────────────────────────────────
