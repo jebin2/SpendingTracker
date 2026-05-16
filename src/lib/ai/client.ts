@@ -94,6 +94,34 @@ async function geminiImage(
   return result.response.text();
 }
 
+// ── OpenCode (via TTT backend) ────────────────────────────────────────────────
+
+const OPENCODE_API_URL = (process.env.OPENCODE_API_URL ?? "https://opencode.voidall.com").replace(/\/$/, "");
+
+async function opencodeText(prompt: string, system: string): Promise<string> {
+  const submitRes = await fetch(`${OPENCODE_API_URL}/api/tasks/upload`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: prompt, system_prompt: system, model: "opencode" }),
+  });
+  if (!submitRes.ok) throw new Error(`OpenCode submit failed: ${submitRes.status}`);
+  const { id } = await submitRes.json();
+
+  const deadline = Date.now() + 120_000;
+  while (Date.now() < deadline) {
+    await new Promise((r) => setTimeout(r, 2000));
+    const pollRes = await fetch(`${OPENCODE_API_URL}/api/tasks/${id}`);
+    if (!pollRes.ok) throw new Error(`OpenCode poll failed: ${pollRes.status}`);
+    const task = await pollRes.json();
+    if (task.status === "completed") {
+      const result = JSON.parse(task.result);
+      return result.response ?? "";
+    }
+    if (task.status === "failed") throw new Error(`OpenCode task failed: ${task.error}`);
+  }
+  throw new Error("OpenCode task timed out after 120s");
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export async function generateText(
@@ -102,6 +130,7 @@ export async function generateText(
   maxTokens = 1024
 ): Promise<string> {
   if (PROVIDER === "gemini") return geminiText(prompt, system);
+  if (PROVIDER === "opencode") return opencodeText(prompt, system);
   return claudeText(prompt, system, maxTokens);
 }
 
@@ -113,6 +142,7 @@ export async function generateWithImage(
   maxTokens = 2048
 ): Promise<string> {
   if (PROVIDER === "gemini") return geminiImage(imageBase64, mimeType, text, system);
+  if (PROVIDER === "opencode") throw new Error("OpenCode does not support image inputs");
   return claudeImage(imageBase64, mimeType, text, system, maxTokens);
 }
 
