@@ -1,6 +1,7 @@
 import { getMetaValues, setMetaValue } from "@/lib/sheets";
 import { runEmailImportJob } from "@/server/jobs/emailImportJob";
 import { safeJsonParse } from "@/lib/safeJson";
+import { log } from "@/lib/logger";
 import type { SheetSession } from "./types";
 
 export type EmailImportConfigUpdate = {
@@ -39,6 +40,6 @@ export async function getEmailImportStatus(session: SheetSession) {
 // Returns immediately; job runs asynchronously.
 export function requestEmailImport(session: SheetSession, { manual = false } = {}): void {
   runEmailImportJob(session, { manual }).catch((err) => {
-    console.error("Email import job failed:", err);
+    log.error("email", "job threw unexpectedly", err);
   });
 }

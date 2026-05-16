@@ -1,4 +1,5 @@
 import { getGmailClient } from "@/lib/sheets/client";
+import { log } from "@/lib/logger";
 import {
   appendTransaction,
   getProcessedEmailIds,

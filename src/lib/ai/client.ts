@@ -1,5 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { log } from "@/lib/logger";
 
 // Set AI_PROVIDER=gemini in .env.local to switch; defaults to opencode
 const PRIMARY = (process.env.AI_PROVIDER ?? "opencode").toLowerCase();
@@ -150,14 +151,28 @@ function imageChain(): ImageFn[] {
   return [claude, gemini];
 }
 
-async function runChain<T>(chain: Array<() => Promise<T>>): Promise<T> {
+const PROVIDER_NAMES = ["claude", "gemini", "opencode"];
+
+function providerName(fn: Function): string {
+  const src = fn.toString().slice(0, 30);
+  if (src.includes("claude")) return "claude";
+  if (src.includes("gemini")) return "gemini";
+  if (src.includes("opencode")) return "opencode";
+  return "unknown";
+}
+
+async function runChain<T>(chain: Array<() => Promise<T>>, label: string): Promise<T> {
   let lastErr: unknown;
-  for (const fn of chain) {
+  for (let i = 0; i < chain.length; i++) {
+    const provider = PROVIDER_NAMES[(i + (PRIMARY === "gemini" ? 1 : PRIMARY === "opencode" ? 2 : 0)) % 3];
+    const t0 = Date.now();
     try {
-      return await fn();
+      const result = await chain[i]();
+      log.info("ai", `${label} ok`, { provider, ms: Date.now() - t0 });
+      return result;
     } catch (err) {
       lastErr = err;
-      console.warn("AI provider failed, trying next:", err instanceof Error ? err.message : err);
+      log.warn("ai", `${label} failed — trying next`, { provider, ms: Date.now() - t0, err: err instanceof Error ? err.message : String(err) });
     }
   }
   throw lastErr;
@@ -171,7 +186,7 @@ export async function generateText(
   maxTokens = 1024
 ): Promise<string> {
   const chain = textChain();
-  return runChain(chain.map((fn) => () => fn(prompt, system, maxTokens)));
+  return runChain(chain.map((fn) => () => fn(prompt, system, maxTokens)), "text");
 }
 
 export async function generateWithImage(
@@ -182,7 +197,7 @@ export async function generateWithImage(
   maxTokens = 2048
 ): Promise<string> {
   const chain = imageChain();
-  return runChain(chain.map((fn) => () => fn(imageBase64, mimeType, text, system, maxTokens)));
+  return runChain(chain.map((fn) => () => fn(imageBase64, mimeType, text, system, maxTokens)), "image");
 }
 
 export const activeProvider = PRIMARY;

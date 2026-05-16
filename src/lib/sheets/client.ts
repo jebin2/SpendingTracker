@@ -1,4 +1,5 @@
 import { google } from "googleapis";
+import { log } from "@/lib/logger";
 
 export function getAuth(accessToken: string) {
   const auth = new google.auth.OAuth2(
@@ -31,7 +32,9 @@ export async function withSheetsRetry<T>(fn: () => Promise<T>, maxRetries = 3): 
       const code = (err as { code?: number })?.code;
       const isRetryable = code === 429 || code === 500 || code === 503;
       if (isRetryable && attempt < maxRetries) {
-        await new Promise((r) => setTimeout(r, 1000 * Math.pow(2, attempt)));
+        const delay = 1000 * Math.pow(2, attempt);
+        log.warn("sheets", `retry ${attempt + 1}/${maxRetries}`, { code, delayMs: delay });
+        await new Promise((r) => setTimeout(r, delay));
         continue;
       }
       throw err;

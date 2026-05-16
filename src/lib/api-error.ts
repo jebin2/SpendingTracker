@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { log } from "@/lib/logger";
 
 function isGoogleAuthError(err: unknown): boolean {
   if (typeof err !== "object" || err === null) return false;
@@ -12,7 +13,7 @@ function isGoogleAuthError(err: unknown): boolean {
 }
 
 export function apiError(label: string, err: unknown) {
-  console.error(`${label}:`, err);
+  log.error("api", label, err);
   if (isGoogleAuthError(err)) {
     return NextResponse.json({ error: "auth_expired" }, { status: 401 });
   }
