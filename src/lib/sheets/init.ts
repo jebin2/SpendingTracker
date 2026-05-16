@@ -78,6 +78,7 @@ export async function initSpendingSheet(
         { properties: { title: "analysis_cache" } },
         { properties: { title: "item_suggestions" } },
         { properties: { title: "meta" } },
+        { properties: { title: "parsed_emails" } },
       ],
     },
   });
@@ -138,6 +139,13 @@ export async function initSpendingSheet(
     range: "meta!A1:B1",
     valueInputOption: "RAW",
     requestBody: { values: [["key", "value"]] },
+  });
+
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: sheetId,
+    range: "parsed_emails!A1:F1",
+    valueInputOption: "RAW",
+    requestBody: { values: [["email_id", "from", "subject", "parsed_at", "status", "tx_ids"]] },
   });
 
   await seedDefaultCategories(sheets, sheetId);

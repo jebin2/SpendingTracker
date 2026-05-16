@@ -1,0 +1,271 @@
+"use client";
+
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
+
+interface EmailStatus {
+  enabled: boolean;
+  fromContains: string[];
+  daysBack: number;
+  lastRun: string | null;
+  totalTxImported: number;
+  emailsScanned: number;
+  emailsParsed: number;
+  emailsSkipped: number;
+}
+
+export default function EmailImportSettingsPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [fetching, setFetching] = useState(false);
+  const [status, setStatus] = useState<EmailStatus | null>(null);
+  const [enabled, setEnabled] = useState(false);
+  const [fromContains, setFromContains] = useState<string[]>([]);
+  const [daysBack, setDaysBack] = useState(7);
+  const [filterInput, setFilterInput] = useState("");
+  const [error, setError] = useState("");
+  const filterInputRef = useRef<HTMLInputElement>(null);
+
+  const load = useCallback(async () => {
+    try {
+      const res = await fetch("/api/email/status");
+      if (!res.ok) return;
+      const data = await res.json() as EmailStatus;
+      setStatus(data);
+      setEnabled(data.enabled);
+      setFromContains(data.fromContains);
+      setDaysBack(data.daysBack);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { void load(); }, [load]);
+
+  function addFilter() {
+    const val = filterInput.trim().toLowerCase();
+    if (!val) return;
+    if (fromContains.includes(val)) { setFilterInput(""); return; }
+    setFromContains((prev) => [...prev, val]);
+    setFilterInput("");
+    filterInputRef.current?.focus();
+  }
+
+  function removeFilter(f: string) {
+    setFromContains((prev) => prev.filter((x) => x !== f));
+  }
+
+  async function save() {
+    setError("");
+    if (enabled && fromContains.length === 0) {
+      setError("Add at least one 'from contains' filter before enabling.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch("/api/email/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled, fromContains, daysBack }),
+      });
+      if (!res.ok) {
+        const d = await res.json();
+        setError(d.error ?? "Save failed.");
+        return;
+      }
+      await load();
+    } catch {
+      setError("Network error — please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function fetchNow() {
+    if (fromContains.length === 0) { setError("Add at least one filter first."); return; }
+    setFetching(true);
+    setError("");
+    try {
+      await fetch("/api/email/fetch", { method: "POST" });
+      // Job runs in background — poll status after a short delay
+      setTimeout(() => { void load(); setFetching(false); }, 3000);
+    } catch {
+      setFetching(false);
+      setError("Could not trigger fetch.");
+    }
+  }
+
+  function formatDate(iso: string) {
+    return new Date(iso).toLocaleString("en-IN", {
+      day: "numeric", month: "short", year: "numeric",
+      hour: "2-digit", minute: "2-digit",
+    });
+  }
+
+  return (
+    <div className="max-w-lg mx-auto px-5 pb-24">
+      {/* Mobile header */}
+      <div className="md:hidden sticky top-0 z-30 flex items-center pt-10 pb-3 gap-3" style={{ background: "var(--color-background)" }}>
+        <button onClick={() => router.back()} className="w-9 h-9 flex items-center justify-center rounded-xl" style={{ background: "var(--color-surface-container)" }}>
+          <span className="material-symbols-outlined" style={{ color: "var(--color-on-surface-variant)" }}>arrow_back</span>
+        </button>
+        <h1 className="font-semibold" style={{ fontSize: 20 }}>Email Import</h1>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center pt-16">
+          <div className="w-10 h-10 rounded-full border-4 border-t-transparent animate-spin"
+            style={{ borderColor: "var(--color-primary-fixed)", borderTopColor: "var(--color-primary)" }} />
+        </div>
+      ) : (
+        <div className="flex flex-col gap-5 pt-4">
+
+          {/* Enable toggle */}
+          <div className="rounded-3xl border p-5 flex items-start gap-4"
+            style={{ borderColor: "var(--color-outline-variant)", background: "var(--color-surface-container-lowest)" }}>
+            <div className="flex-1">
+              <p style={{ fontSize: 16, fontWeight: 600, color: "var(--color-on-surface)" }}>Auto-import from email</p>
+              <p style={{ fontSize: 13, color: "var(--color-on-surface-variant)", marginTop: 4, lineHeight: 1.5 }}>
+                Emails are scanned nightly at midnight and matching transactions added automatically — no confirmation needed.
+              </p>
+            </div>
+            <button
+              onClick={() => setEnabled((e) => !e)}
+              className="w-12 h-7 rounded-full flex items-center transition-colors flex-shrink-0 mt-0.5"
+              style={{ background: enabled ? "var(--color-primary)" : "var(--color-outline-variant)", padding: 3 }}
+            >
+              <div className="w-5 h-5 rounded-full bg-white transition-transform"
+                style={{ transform: enabled ? "translateX(20px)" : "translateX(0)" }} />
+            </button>
+          </div>
+
+          {/* From-contains filters */}
+          <div>
+            <p style={{ fontSize: 12, color: "var(--color-outline)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }} className="px-1 mb-2">
+              Import from emails containing <span style={{ color: "var(--color-error)" }}>*</span>
+            </p>
+            <div className="rounded-2xl border p-4 flex flex-col gap-3"
+              style={{ borderColor: "var(--color-outline-variant)", background: "var(--color-surface-container-lowest)" }}>
+
+              {/* Chips */}
+              {fromContains.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {fromContains.map((f) => (
+                    <span key={f} className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium"
+                      style={{ background: "var(--color-primary-fixed)", color: "var(--color-primary)" }}>
+                      {f}
+                      <button onClick={() => removeFilter(f)} style={{ lineHeight: 1 }}>
+                        <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* Input */}
+              <div className="flex gap-2">
+                <input
+                  ref={filterInputRef}
+                  type="text"
+                  value={filterInput}
+                  onChange={(e) => setFilterInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && addFilter()}
+                  placeholder="e.g. hdfcbank, swiggy.in, amazon"
+                  className="flex-1 px-3 py-2 rounded-xl outline-none text-sm"
+                  style={{ background: "var(--color-surface-container)", color: "var(--color-on-surface)", border: "1px solid var(--color-outline-variant)" }}
+                />
+                <button onClick={addFilter} disabled={!filterInput.trim()}
+                  className="px-4 py-2 rounded-xl font-medium text-sm"
+                  style={{ background: "var(--color-primary)", color: "var(--color-on-primary)", opacity: filterInput.trim() ? 1 : 0.4 }}>
+                  Add
+                </button>
+              </div>
+              <p style={{ fontSize: 12, color: "var(--color-outline)" }}>
+                Substring match — "hdfcbank" matches any sender containing that string.
+              </p>
+            </div>
+          </div>
+
+          {/* Days back */}
+          <div>
+            <p style={{ fontSize: 12, color: "var(--color-outline)", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }} className="px-1 mb-2">
+              Fetch emails from last N days
+            </p>
+            <div className="rounded-2xl border p-4 flex items-center gap-4"
+              style={{ borderColor: "var(--color-outline-variant)", background: "var(--color-surface-container-lowest)" }}>
+              <p style={{ fontSize: 14, color: "var(--color-on-surface-variant)", flex: 1 }}>
+                Only applies on first run. After that, only new emails are fetched.
+              </p>
+              <input
+                type="number"
+                min={1}
+                max={365}
+                value={daysBack}
+                onChange={(e) => setDaysBack(Math.max(1, parseInt(e.target.value) || 7))}
+                className="w-20 px-3 py-2 rounded-xl text-center font-semibold outline-none"
+                style={{ background: "var(--color-surface-container)", color: "var(--color-on-surface)", fontSize: 16, border: "1px solid var(--color-outline-variant)" }}
+              />
+            </div>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <p className="px-4 py-3 rounded-2xl text-sm" style={{ background: "var(--color-error-container)", color: "var(--color-on-error-container)" }}>
+              {error}
+            </p>
+          )}
+
+          {/* Save */}
+          <button onClick={save} disabled={saving}
+            className="w-full py-4 rounded-2xl font-semibold flex items-center justify-center gap-2"
+            style={{ background: "var(--color-primary)", color: "var(--color-on-primary)", fontSize: 16, opacity: saving ? 0.7 : 1 }}>
+            {saving
+              ? <><div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "rgba(255,255,255,0.4)", borderTopColor: "#fff" }} />Saving…</>
+              : <><span className="material-symbols-outlined">save</span>Save settings</>}
+          </button>
+
+          {/* Divider */}
+          <div style={{ borderTop: "1px solid var(--color-outline-variant)" }} />
+
+          {/* Status + Fetch now */}
+          <div className="flex flex-col gap-3">
+            {status?.lastRun && (
+              <div className="rounded-2xl p-4" style={{ background: "var(--color-surface-container-lowest)", border: "1px solid var(--color-outline-variant)" }}>
+                <p style={{ fontSize: 13, fontWeight: 600, color: "var(--color-on-surface)" }}>Last run</p>
+                <p style={{ fontSize: 13, color: "var(--color-on-surface-variant)", marginTop: 2 }}>{formatDate(status.lastRun)}</p>
+                <p style={{ fontSize: 13, color: "var(--color-on-surface-variant)", marginTop: 6 }}>
+                  {status.emailsScanned} emails scanned &nbsp;·&nbsp;
+                  {status.emailsParsed} transactions added &nbsp;·&nbsp;
+                  {status.emailsSkipped} skipped
+                </p>
+                {status.totalTxImported > 0 && (
+                  <p style={{ fontSize: 12, color: "var(--color-outline)", marginTop: 4 }}>
+                    {status.totalTxImported} total transactions imported from email
+                  </p>
+                )}
+              </div>
+            )}
+
+            <button onClick={fetchNow} disabled={fetching || fromContains.length === 0}
+              className="w-full py-4 rounded-2xl font-semibold flex items-center justify-center gap-2"
+              style={{ background: "var(--color-surface-container)", color: "var(--color-on-surface)", fontSize: 15, opacity: (fetching || fromContains.length === 0) ? 0.5 : 1 }}>
+              {fetching
+                ? <><div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "var(--color-outline)", borderTopColor: "var(--color-on-surface)" }} />Starting…</>
+                : <><span className="material-symbols-outlined">download</span>Fetch now</>}
+            </button>
+          </div>
+
+          {/* Info note */}
+          <div className="rounded-2xl p-4 flex gap-3" style={{ background: "var(--color-primary-fixed)" }}>
+            <span className="material-symbols-outlined flex-shrink-0" style={{ color: "var(--color-primary)", fontSize: 18 }}>info</span>
+            <p style={{ fontSize: 13, color: "var(--color-primary)", lineHeight: 1.6 }}>
+              Only email text is read — images and attachments are never processed. Auto-runs daily at midnight.
+            </p>
+          </div>
+
+        </div>
+      )}
+    </div>
+  );
+}

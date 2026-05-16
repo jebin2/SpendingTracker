@@ -10,6 +10,7 @@ export interface ParsedTransaction {
   category: string;
   subcategory?: string;
   item_name?: string;
+  notes?: string;
   payment_method: PaymentMethod;
   confidence: number;
   uncertain_fields: string[];

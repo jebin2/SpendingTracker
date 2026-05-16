@@ -17,6 +17,10 @@ export function getDriveClient(accessToken: string) {
   return google.drive({ version: "v3", auth: getAuth(accessToken) });
 }
 
+export function getGmailClient(accessToken: string) {
+  return google.gmail({ version: "v1", auth: getAuth(accessToken) });
+}
+
 // Retry wrapper for Sheets API calls — handles 429 (rate limit) and transient 5xx.
 // Delays: 1s, 2s, 4s before giving up.
 export async function withSheetsRetry<T>(fn: () => Promise<T>, maxRetries = 3): Promise<T> {

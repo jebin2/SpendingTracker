@@ -2,6 +2,8 @@ export { initSpendingSheet, resetSheet } from "./init";
 export { appendTransaction, getTransactions, getAllTransactions, getTransactionById, updateTransactionField, PAGE_SIZE } from "./transactions";
 export type { TransactionPage } from "./transactions";
 export { getCategories, appendCategory, deleteCategoryById } from "./categories";
+export { checkEmailParsed, recordParsedEmail, getParsedEmailStats } from "./parsedEmails";
+export type { ParsedEmailRecord, ParsedEmailStatus } from "./parsedEmails";
 export { getMetaValues, setMetaValue } from "./meta";
 export { getOrCreateReceiptsFolder, uploadReceiptToDrive, downloadReceiptFromDrive } from "./drive";
 export type { AnalysisCacheStatus, CachedAnalysis } from "./analysis-cache";
