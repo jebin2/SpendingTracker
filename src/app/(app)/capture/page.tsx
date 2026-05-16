@@ -20,7 +20,7 @@ function CaptureContent() {
   const fileRef = useRef<HTMLInputElement>(null);
   const region = typeof window !== "undefined" ? localStorage.getItem("region") ?? "" : "";
 
-  const { text, setText, parsing, parsed, resetParsed, parseText } = useSmsParser(region);
+  const { text, setText, parsing, parsed, parseError, resetParsed, parseText } = useSmsParser(region);
   const { uploadState, uploadMsg, handleReceiptFile, resetUpload } = useReceiptUpload(region);
   const { cameraActive, videoRef, startCamera, capturePhoto, stopCamera } = useCameraCapture();
 
@@ -83,7 +83,14 @@ function CaptureContent() {
       )}
 
       {tab === "paste" && (
-        <PasteCapturePanel text={text} onTextChange={setText} onParse={parseText} parsing={parsing} />
+        <>
+          {parseError && (
+            <p className="px-4 py-2 rounded-xl text-sm" style={{ background: "var(--color-error-container)", color: "var(--color-on-error-container)" }}>
+              {parseError}
+            </p>
+          )}
+          <PasteCapturePanel text={text} onTextChange={setText} onParse={parseText} parsing={parsing} />
+        </>
       )}
 
       <input ref={fileRef} type="file" accept="image/*" className="hidden"

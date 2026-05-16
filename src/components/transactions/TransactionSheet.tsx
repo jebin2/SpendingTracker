@@ -10,6 +10,8 @@ import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useTransactionsStore } from "@/store/transactionsStore";
 import { useNetworkStore } from "@/store/networkStore";
 import { useTransactions } from "@/hooks/useTransactions";
+import { transactionsApi, transactionUrl } from "@/lib/api/transactions";
+import { receiptsApi } from "@/lib/api/receipts";
 
 // ── InFlight placeholder ──────────────────────────────────────────────────────
 
@@ -71,14 +73,14 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
     setDeleting(true);
     try {
       if (isOnline) {
-        const res = await fetch(`/api/transactions/${tx.id}`, { method: "DELETE" });
+        const res = await transactionsApi.delete(tx.id);
         if (!res.ok) throw new Error("Delete failed — please try again.");
         removeTransaction(tx.id);
         await removeLocalTransaction(tx.id);
       } else {
         removeTransaction(tx.id);
         await removeLocalTransaction(tx.id);
-        await enqueueOp("DELETE", `/api/transactions/${tx.id}`, null);
+        await enqueueOp("DELETE", transactionUrl(tx.id), null);
         useNetworkStore.getState().setPendingCount(await pendingCount());
       }
       onClose();
@@ -94,11 +96,7 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
     setError(null);
     setRetrying(true);
     const region = localStorage.getItem("region") ?? "";
-    await fetch("/api/receipts/process", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ txId: tx.id, region }),
-    });
+    await receiptsApi.process(tx.id, region);
     setTx((prev) => ({ ...prev, status: "processing" }));
     setView("detail");
     setRetrying(false);

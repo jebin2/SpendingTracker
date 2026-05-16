@@ -3,6 +3,8 @@
 import { useState } from "react";
 import type { Transaction } from "@/types";
 import type { DuplicateGroup } from "@/features/transactions/utils/list";
+import { duplicatesApi } from "@/lib/api/duplicates";
+import { transactionsApi } from "@/lib/api/transactions";
 
 export function useDuplicateResolution(loadData: () => Promise<Transaction[]>) {
   const [dupChecking, setDupChecking] = useState(false);
@@ -13,7 +15,7 @@ export function useDuplicateResolution(loadData: () => Promise<Transaction[]>) {
     setDupChecking(true);
     setDupError(null);
     try {
-      const res = await fetch("/api/duplicates/detect", { method: "POST" });
+      const res = await duplicatesApi.detect();
       const data = await res.json();
       if (!res.ok) {
         setDupError(
@@ -32,13 +34,10 @@ export function useDuplicateResolution(loadData: () => Promise<Transaction[]>) {
   }
 
   async function resolveDuplicate(tx: Transaction, action: "keep" | "remove") {
-    await fetch(`/api/transactions/${tx.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        updates: action === "remove" ? { deleted: true } : { is_duplicate: false, duplicate_ref: undefined },
-      }),
-    });
+    await transactionsApi.update(tx.id, action === "remove"
+      ? { deleted: true }
+      : { is_duplicate: false, duplicate_ref: undefined }
+    );
     setActiveDupGroup(null);
     loadData();
   }
@@ -46,11 +45,7 @@ export function useDuplicateResolution(loadData: () => Promise<Transaction[]>) {
   async function dismissGroup(group: DuplicateGroup) {
     await Promise.all(
       group.duplicates.map((t) =>
-        fetch(`/api/transactions/${t.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ updates: { is_duplicate: false, duplicate_ref: undefined } }),
-        })
+        transactionsApi.update(t.id, { is_duplicate: false, duplicate_ref: undefined })
       )
     );
     setActiveDupGroup(null);

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { ParsedTransaction, PaymentMethod } from "@/types";
+import { transactionsApi } from "@/lib/api/transactions";
 
 interface ConfirmFormProps {
   parsed: ParsedTransaction;
@@ -31,11 +32,7 @@ export function ConfirmForm({ parsed, rawText, onBack }: ConfirmFormProps) {
       payment_method: form.payment_method,
       source: "sms" as const, raw_input: rawText, status: "done" as const,
     };
-    const res = await fetch("/api/transactions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ transaction: tx }),
-    });
+    const res = await transactionsApi.create(tx);
     setSaving(false);
     if (res.ok) router.push("/transactions");
     else alert("Failed to save");

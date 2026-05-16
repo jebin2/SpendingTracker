@@ -1,46 +1,21 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireSession } from "@/server/http/requireSession";
+import { NextResponse } from "next/server";
+import { withSession } from "@/server/http/withSession";
 import { updateTransactionField } from "@/lib/sheets";
-import { apiError } from "@/lib/api-error";
 import type { Transaction } from "@/types";
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const result = await requireSession();
-  if (!result.ok) return result.response;
-  const { accessToken, sheetId } = result.session;
-  const { id } = await params;
+export const PUT = withSession<{ id: string }>("PUT transaction", async (session, req, { id }) => {
   const { updates } = await req.json() as { updates: Partial<Transaction> };
-  try {
-    await updateTransactionField(accessToken, sheetId, id, updates);
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    return apiError("PUT transaction error", err);
-  }
-}
+  await updateTransactionField(session.accessToken, session.sheetId, id, updates);
+  return NextResponse.json({ ok: true });
+});
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const result = await requireSession();
-  if (!result.ok) return result.response;
-  const { accessToken, sheetId } = result.session;
-  const { id } = await params;
+export const PATCH = withSession<{ id: string }>("PATCH transaction", async (session, req, { id }) => {
   const updates = await req.json() as Partial<Transaction>;
-  try {
-    await updateTransactionField(accessToken, sheetId, id, updates);
-    return NextResponse.json({ ok: true, updates });
-  } catch (err) {
-    return apiError("PATCH transaction error", err);
-  }
-}
+  await updateTransactionField(session.accessToken, session.sheetId, id, updates);
+  return NextResponse.json({ ok: true, updates });
+});
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const result = await requireSession();
-  if (!result.ok) return result.response;
-  const { accessToken, sheetId } = result.session;
-  const { id } = await params;
-  try {
-    await updateTransactionField(accessToken, sheetId, id, { deleted: true });
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    return apiError("DELETE transaction error", err);
-  }
-}
+export const DELETE = withSession<{ id: string }>("DELETE transaction", async (session, _req, { id }) => {
+  await updateTransactionField(session.accessToken, session.sheetId, id, { deleted: true });
+  return NextResponse.json({ ok: true });
+});

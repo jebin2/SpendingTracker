@@ -9,13 +9,11 @@ import { FAB } from "@/components/layout/FAB";
 import { PullToRefresh } from "@/components/layout/PullToRefresh";
 import { SyncProvider } from "@/providers/SyncProvider";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
+import { useFetchInterceptor } from "@/hooks/useFetchInterceptor";
 import { useTransactionsStore } from "@/store/transactionsStore";
 import { useNetworkStore } from "@/store/networkStore";
 import { pullTransactions } from "@/lib/offline";
 import { useCallback } from "react";
-
-// Module-level guard — prevents double-wrapping fetch in React StrictMode dev
-let fetchIntercepted = false;
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { data: session, status } = useSession();
@@ -28,31 +26,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     signOut({ callbackUrl: "/" });
   }
 
-  useEffect(() => {
-    if (fetchIntercepted) return;
-    fetchIntercepted = true;
-
-    const original = window.fetch;
-    window.fetch = async (...args) => {
-      const res = await original(...args);
-      const input = args[0];
-      const url =
-        typeof input === "string" ? input :
-        input instanceof Request ? input.url :
-        input instanceof URL ? input.pathname :
-        "";
-      if (res.status === 401 && url.includes("/api/")) {
-        triggerSignOut();
-      }
-      return res;
-    };
-
-    return () => {
-      // Only restore if we were the ones who wrapped
-      window.fetch = original;
-      fetchIntercepted = false;
-    };
-  }, []);
+  useFetchInterceptor(triggerSignOut);
 
   useEffect(() => {
     if (status === "unauthenticated") router.replace("/");

@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import type { PendingSuggestion, Transaction } from "@/types";
+import { itemsApi } from "@/lib/api/items";
 
 export function useTransactionSuggestions(loadData: () => Promise<Transaction[]>) {
   const [suggestions, setSuggestions] = useState<Record<string, PendingSuggestion[]>>({});
@@ -9,8 +10,8 @@ export function useTransactionSuggestions(loadData: () => Promise<Transaction[]>
 
   const loadSuggestions = useCallback(async (txList: Transaction[]) => {
     const [res] = await Promise.all([
-      fetch("/api/items/suggestions"),
-      fetch("/api/items/normalize", { method: "POST" }).catch(() => {}),
+      itemsApi.getSuggestions(),
+      itemsApi.normalize().catch(() => {}),
     ]);
     if (!res.ok) return;
     const data = await res.json();
@@ -43,11 +44,7 @@ export function useTransactionSuggestions(loadData: () => Promise<Transaction[]>
       return next;
     });
 
-    await fetch("/api/items/suggestions", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ key: s.key, field: s.field, action }),
-    });
+    await itemsApi.resolveSuggestion(s, action);
 
     if (action === "accept") loadData();
   }

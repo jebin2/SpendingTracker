@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
-import { requireSession } from "@/server/http/requireSession";
+import { withSession } from "@/server/http/withSession";
 import { requestItemNormalization } from "@/server/services/itemNormalizationService";
 
-export async function POST() {
-  const result = await requireSession();
-  if (!result.ok) return result.response;
-  return NextResponse.json(await requestItemNormalization(result.session));
-}
+export const POST = withSession("POST items normalize", async (session) => {
+  return NextResponse.json(await requestItemNormalization(session));
+});

@@ -1,4 +1,5 @@
 import { generateText } from "./client";
+import { tryParseAiJson } from "./parseJson";
 
 export interface NotesExtractions {
   item_name?: string;   // more specific name found in notes
@@ -43,11 +44,5 @@ Respond with JSON only:
     1024
   );
 
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (!match) return {};
-  try {
-    return JSON.parse(match[0]) as Record<string, NotesExtractions>;
-  } catch {
-    return {};
-  }
+  return tryParseAiJson<Record<string, NotesExtractions>>(raw) ?? {};
 }

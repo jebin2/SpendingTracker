@@ -1,4 +1,5 @@
 import { generateText } from "./client";
+import { tryParseAiJson } from "./parseJson";
 
 export interface ItemGroup {
   canonical: string;   // clean, normalised product name
@@ -37,17 +38,12 @@ Respond with JSON only:
     2048
   );
 
-  const match = raw.match(/\{[\s\S]*\}/);
-  if (!match) return names.map((n) => ({ canonical: n, variants: [n] }));
+  const parsed = tryParseAiJson<{ groups: ItemGroup[] }>(raw);
+  if (!parsed) return names.map((n) => ({ canonical: n, variants: [n] }));
 
-  try {
-    const parsed = JSON.parse(match[0]) as { groups: ItemGroup[] };
-    // Safety: make sure every input name appears somewhere
-    const covered = new Set(parsed.groups.flatMap((g) => g.variants));
-    const missed = names.filter((n) => !covered.has(n));
-    for (const n of missed) parsed.groups.push({ canonical: n, variants: [n] });
-    return parsed.groups;
-  } catch {
-    return names.map((n) => ({ canonical: n, variants: [n] }));
-  }
+  // Safety: make sure every input name appears somewhere
+  const covered = new Set(parsed.groups.flatMap((g) => g.variants));
+  const missed = names.filter((n) => !covered.has(n));
+  for (const n of missed) parsed.groups.push({ canonical: n, variants: [n] });
+  return parsed.groups;
 }

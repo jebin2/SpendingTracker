@@ -1,17 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireSession } from "@/server/http/requireSession";
+import { NextResponse } from "next/server";
+import { withSession } from "@/server/http/withSession";
 import { getAnalysisStatus, requestAnalysis } from "@/server/services/analysisService";
 
-export async function GET(req: NextRequest) {
-  const result = await requireSession();
-  if (!result.ok) return result.response;
+export const GET = withSession("GET analysis", async (session, req) => {
   const period = new URL(req.url).searchParams.get("period") ?? "month";
-  return NextResponse.json(await getAnalysisStatus(result.session, period));
-}
+  return NextResponse.json(await getAnalysisStatus(session, period));
+});
 
-export async function POST(req: NextRequest) {
-  const result = await requireSession();
-  if (!result.ok) return result.response;
+export const POST = withSession("POST analysis", async (session, req) => {
   const { period = "month", region, lifestyle_tags, force_refresh } = await req.json();
-  return NextResponse.json(await requestAnalysis(result.session, { period, region, lifestyle_tags, force_refresh }));
-}
+  return NextResponse.json(await requestAnalysis(session, { period, region, lifestyle_tags, force_refresh }));
+});

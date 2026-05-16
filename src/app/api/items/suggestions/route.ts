@@ -1,17 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireSession } from "@/server/http/requireSession";
+import { NextResponse } from "next/server";
+import { withSession } from "@/server/http/withSession";
 import { getPendingSuggestions, resolvePendingSuggestion } from "@/server/services/itemSuggestionService";
 
-export async function GET() {
-  const result = await requireSession();
-  if (!result.ok) return result.response;
-  const suggestions = await getPendingSuggestions(result.session);
+export const GET = withSession("GET suggestions", async (session) => {
+  const suggestions = await getPendingSuggestions(session);
   return NextResponse.json({ suggestions });
-}
+});
 
-export async function PATCH(req: NextRequest) {
-  const result = await requireSession();
-  if (!result.ok) return result.response;
-  await resolvePendingSuggestion(result.session, await req.json());
+export const PATCH = withSession("PATCH suggestion", async (session, req) => {
+  await resolvePendingSuggestion(session, await req.json());
   return NextResponse.json({ ok: true });
-}
+});

@@ -1,26 +1,20 @@
-import { NextRequest, NextResponse } from "next/server";
-import { requireSession } from "@/server/http/requireSession";
+import { NextResponse } from "next/server";
+import { withSession } from "@/server/http/withSession";
 import { parseReceiptImage } from "@/lib/ai/parse-image";
-import { apiError } from "@/lib/api-error";
 import { todayISO } from "@/lib/date/iso";
 
-export async function POST(req: NextRequest) {
-  const result = await requireSession();
-  if (!result.ok) return result.response;
+const VALID_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
+type ValidMediaType = typeof VALID_TYPES[number];
+
+export const POST = withSession("POST parse image", async (_session, req) => {
   const formData = await req.formData();
   const image = formData.get("image") as File | null;
   const region = formData.get("region") as string | null;
   if (!image) return NextResponse.json({ error: "image is required" }, { status: 400 });
-  const validTypes = ["image/jpeg", "image/png", "image/webp"] as const;
-  const mediaType = image.type as typeof validTypes[number];
-  if (!validTypes.includes(mediaType)) {
+  if (!VALID_TYPES.includes(image.type as ValidMediaType)) {
     return NextResponse.json({ error: "Only JPEG, PNG, WebP supported" }, { status: 400 });
   }
   const base64 = Buffer.from(await image.arrayBuffer()).toString("base64");
-  try {
-    const extracted = await parseReceiptImage(base64, mediaType, region ?? undefined, todayISO());
-    return NextResponse.json({ extracted, confidence: extracted.confidence });
-  } catch (err) {
-    return apiError("Parse image error", err);
-  }
-}
+  const extracted = await parseReceiptImage(base64, image.type as ValidMediaType, region ?? undefined, todayISO());
+  return NextResponse.json({ extracted, confidence: extracted.confidence });
+});

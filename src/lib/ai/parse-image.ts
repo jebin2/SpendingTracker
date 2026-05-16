@@ -1,4 +1,5 @@
 import { generateWithImage } from "./client";
+import { parseAiJson } from "./parseJson";
 import type { ParsedReceipt } from "@/types";
 import { todayISO } from "@/lib/date/iso";
 
@@ -52,7 +53,5 @@ export async function parseReceiptImage(
     2048
   );
 
-  const jsonMatch = raw.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("No JSON in response");
-  return JSON.parse(jsonMatch[0]) as ParsedReceipt;
+  return parseAiJson<ParsedReceipt>(raw);
 }

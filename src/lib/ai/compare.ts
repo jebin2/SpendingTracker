@@ -1,4 +1,5 @@
 import { generateText } from "./client";
+import { parseAiJson } from "./parseJson";
 import type { CompareResult, MerchantStats, Transaction } from "@/types";
 
 function buildStats(merchant: string, txs: Transaction[]): MerchantStats {
@@ -94,9 +95,7 @@ Respond with JSON only:
     2048
   );
 
-  const jsonMatch = raw.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("No JSON in AI response");
-  const parsed = JSON.parse(jsonMatch[0]);
+  const parsed = parseAiJson<{ summary: string; verdict: string; aspects: CompareResult["aspects"]; recommendation: string }>(raw);
 
   return {
     merchants,

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireSession } from "@/server/http/requireSession";
+import { withSession } from "@/server/http/withSession";
 import { getTransactions, getAnalysisCache, upsertAnalysisCacheRow } from "@/lib/sheets";
 import { normalizeItemNames } from "@/lib/ai/normalize-items";
 import type { ItemPriceComparison } from "@/types";
@@ -47,10 +47,8 @@ function buildComparisons(
     .sort((a, b) => b.entries.length - a.entries.length);
 }
 
-export async function GET() {
-  const result = await requireSession();
-  if (!result.ok) return result.response;
-  const { accessToken, sheetId } = result.session;
+export const GET = withSession("GET compare items", async (session) => {
+  const { accessToken, sheetId } = session;
 
   const allTx = await getTransactions(accessToken, sheetId);
   const withItems = allTx.filter((t) => t.item_name && t.amount > 0);
@@ -69,4 +67,4 @@ export async function GET() {
   }
 
   return NextResponse.json({ comparisons: buildComparisons(withItems, groups), total_items: uniqueNames.length });
-}
+});

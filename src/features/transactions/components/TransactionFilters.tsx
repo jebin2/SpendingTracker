@@ -1,3 +1,4 @@
+import { memo } from "react";
 import type { DatePreset } from "@/features/transactions/utils/list";
 
 interface TransactionFiltersProps {
@@ -17,7 +18,7 @@ interface TransactionFiltersProps {
   categories: string[];
 }
 
-export function TransactionFilters({
+export const TransactionFilters = memo(function TransactionFilters({
   search, onSearchChange,
   filterCat, onCatChange,
   showDupsOnly, onDupsToggle, dupChecking,
@@ -130,4 +131,4 @@ export function TransactionFilters({
       </div>
     </>
   );
-}
+});

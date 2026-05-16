@@ -62,24 +62,27 @@ export function filterAndSortTransactions(
   const { from, to } = getDateFilterRange(filters.datePreset, filters.customFrom, filters.customTo, now);
   const query = filters.search.toLowerCase();
 
-  return transactions
-    .filter((t) => !filters.showDuplicatesOnly || t.is_duplicate)
-    .filter((t) => !filters.category || t.category === filters.category)
-    .filter((t) => !from || t.date >= from)
-    .filter((t) => !to || t.date <= to)
-    .filter((t) =>
-      !query ||
+  const result: Transaction[] = [];
+  for (const t of transactions) {
+    if (filters.showDuplicatesOnly && !t.is_duplicate) continue;
+    if (filters.category && t.category !== filters.category) continue;
+    if (from && t.date < from) continue;
+    if (to && t.date > to) continue;
+    if (query && !(
       t.item_name?.toLowerCase().includes(query) ||
       t.merchant.toLowerCase().includes(query) ||
       t.category?.toLowerCase().includes(query) ||
       t.notes?.toLowerCase().includes(query)
-    )
-    .sort((a, b) => {
-      const aFlight = a.status === "queued" || a.status === "processing" ? 1 : 0;
-      const bFlight = b.status === "queued" || b.status === "processing" ? 1 : 0;
-      if (aFlight !== bFlight) return bFlight - aFlight;
-      return b.date.localeCompare(a.date) || b.time.localeCompare(a.time);
-    });
+    )) continue;
+    result.push(t);
+  }
+
+  return result.sort((a, b) => {
+    const aFlight = a.status === "queued" || a.status === "processing" ? 1 : 0;
+    const bFlight = b.status === "queued" || b.status === "processing" ? 1 : 0;
+    if (aFlight !== bFlight) return bFlight - aFlight;
+    return b.date.localeCompare(a.date) || b.time.localeCompare(a.time);
+  });
 }
 
 export function getDuplicateGroups(transactions: Transaction[]): DuplicateGroup[] {

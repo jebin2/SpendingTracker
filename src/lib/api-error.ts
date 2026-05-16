@@ -1,13 +1,17 @@
 import { NextResponse } from "next/server";
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function isGoogleAuthError(err: any): boolean {
-  return err?.status === 401 || err?.code === 401 ||
-    err?.cause?.code === 401 || err?.response?.status === 401;
+function isGoogleAuthError(err: unknown): boolean {
+  if (typeof err !== "object" || err === null) return false;
+  const e = err as Record<string, unknown>;
+  return (
+    e["status"] === 401 ||
+    e["code"] === 401 ||
+    (typeof e["cause"] === "object" && e["cause"] !== null && (e["cause"] as Record<string, unknown>)["code"] === 401) ||
+    (typeof e["response"] === "object" && e["response"] !== null && (e["response"] as Record<string, unknown>)["status"] === 401)
+  );
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function apiError(label: string, err: any) {
+export function apiError(label: string, err: unknown) {
   console.error(`${label}:`, err);
   if (isGoogleAuthError(err)) {
     return NextResponse.json({ error: "auth_expired" }, { status: 401 });

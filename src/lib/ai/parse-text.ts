@@ -1,4 +1,5 @@
 import { generateText } from "./client";
+import { parseAiJson } from "./parseJson";
 import type { ParsedTransaction } from "@/types";
 import { todayISO } from "@/lib/date/iso";
 
@@ -44,7 +45,5 @@ export async function parseTransactionText(
     1024
   );
 
-  const jsonMatch = raw.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) throw new Error("No JSON in response");
-  return JSON.parse(jsonMatch[0]) as ParsedTransaction;
+  return parseAiJson<ParsedTransaction>(raw);
 }

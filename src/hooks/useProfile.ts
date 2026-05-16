@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { profileApi } from "@/lib/api/profile";
+import { safeJsonParse } from "@/lib/safeJson";
 
 export interface Profile {
   name: string;
@@ -27,7 +29,7 @@ export function useProfile() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/user/profile");
+      const res = await profileApi.get();
       if (res.ok) {
         const data = await res.json();
         setProfile(data);
@@ -38,7 +40,7 @@ export function useProfile() {
       setProfile({
         ...DEFAULT_PROFILE,
         region: localStorage.getItem("region") ?? "",
-        lifestyle_tags: JSON.parse(localStorage.getItem("lifestyle_tags") ?? "[]"),
+        lifestyle_tags: safeJsonParse<string[]>(localStorage.getItem("lifestyle_tags"), []),
       });
     } finally {
       setLoading(false);
@@ -51,15 +53,10 @@ export function useProfile() {
   const save = useCallback(async (updates: Partial<Profile>): Promise<boolean> => {
     setSaving(true);
     try {
-      const res = await fetch("/api/user/profile", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(
-          Object.fromEntries(
-            Object.entries(updates).map(([k, v]) => [k, Array.isArray(v) ? JSON.stringify(v) : String(v ?? "")])
-          )
-        ),
-      });
+      const fields = Object.fromEntries(
+        Object.entries(updates).map(([k, v]) => [k, Array.isArray(v) ? JSON.stringify(v) : String(v ?? "")])
+      );
+      const res = await profileApi.update(fields);
       if (res.ok) {
         setProfile((prev) => ({ ...prev, ...updates }));
         if (updates.region !== undefined) localStorage.setItem("region", updates.region);

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useCallback } from "react";
 import type { Transaction } from "@/types";
+import { receiptsApi } from "@/lib/api/receipts";
 
 export function useReceiptProcessingPoller(
   transactions: Transaction[],
@@ -17,11 +18,7 @@ export function useReceiptProcessingPoller(
       const queued = txs.filter((t) => t.status === "queued" && !processingRef.current.has(t.id));
       for (const tx of queued) {
         processingRef.current.add(tx.id);
-        fetch("/api/receipts/process", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ txId: tx.id, region }),
-        }).catch(() => processingRef.current.delete(tx.id));
+        receiptsApi.process(tx.id, region).catch(() => processingRef.current.delete(tx.id));
       }
     },
     [region]

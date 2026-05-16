@@ -2,6 +2,7 @@
 
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { receiptsApi } from "@/lib/api/receipts";
 
 export type UploadState = "idle" | "uploading" | "done" | "error";
 
@@ -17,18 +18,14 @@ export function useReceiptUpload(region: string) {
       const formData = new FormData();
       formData.append("image", file);
 
-      const uploadRes = await fetch("/api/receipts/upload", { method: "POST", body: formData });
+      const uploadRes = await receiptsApi.upload(formData);
       if (!uploadRes.ok) throw new Error("Upload failed");
       const { txId } = await uploadRes.json();
 
       setUploadMsg("Saved! AI is reading your receipt in the background…");
       setUploadState("done");
 
-      fetch("/api/receipts/process", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ txId, region }),
-      }).catch(() => {});
+      receiptsApi.process(txId, region).catch(() => {});
 
       setTimeout(() => router.push("/transactions"), 1500);
     } catch {

@@ -1,4 +1,5 @@
 import { generateText } from "./client";
+import { tryParseAiJson } from "./parseJson";
 import type { Transaction } from "@/types";
 
 export interface DuplicateGroup {
@@ -44,14 +45,9 @@ Respond with JSON only:
       512
     );
 
-    const match = raw.match(/\[[\s\S]*\]/);
-    if (!match) continue;
-    try {
-      const groups: DuplicateGroup[] = JSON.parse(match[0]);
-      results.push(...groups.filter((g) => g.duplicate_ids?.length > 0));
-    } catch {
-      // skip unparseable response
-    }
+    const groups = tryParseAiJson<DuplicateGroup[]>(raw, "array");
+    if (!groups) continue;
+    results.push(...groups.filter((g) => g.duplicate_ids?.length > 0));
   }
 
   return results;

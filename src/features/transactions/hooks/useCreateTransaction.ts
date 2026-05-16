@@ -6,6 +6,7 @@ import type { Transaction } from "@/types";
 import { useOfflineFetch } from "@/hooks/useOfflineFetch";
 import { saveLocalTransaction } from "@/lib/offline";
 import { useTransactionsStore } from "@/store/transactionsStore";
+import { TRANSACTIONS_URL } from "@/lib/api/transactions";
 
 export function useCreateTransaction() {
   const router = useRouter();
@@ -16,7 +17,7 @@ export function useCreateTransaction() {
   async function createTransaction(tx: Transaction): Promise<string | null> {
     setSaving(true);
     try {
-      const res = await safeFetch("/api/transactions", {
+      const res = await safeFetch(TRANSACTIONS_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ transaction: tx }),

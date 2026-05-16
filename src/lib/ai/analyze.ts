@@ -1,5 +1,6 @@
 import { generateText } from "./client";
-import type { Transaction, AnalysisResult } from "@/types";
+import { tryParseAiJson } from "./parseJson";
+import type { Transaction, AnalysisResult, OptimizationTip } from "@/types";
 
 export async function analyzeSpending(
   transactions: Transaction[],
@@ -65,8 +66,7 @@ Be specific to the region (suggest local alternatives, local prices). For Indian
     2048
   );
 
-  const jsonMatch = raw.match(/\{[\s\S]*\}/);
-  const aiData = jsonMatch ? JSON.parse(jsonMatch[0]) : { ai_insights: [], optimization_tips: [] };
+  const aiData = tryParseAiJson<{ ai_insights: string[]; optimization_tips: OptimizationTip[] }>(raw) ?? { ai_insights: [], optimization_tips: [] };
 
   return {
     period: periodLabel,
