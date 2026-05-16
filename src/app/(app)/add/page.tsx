@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { formatINR } from "@/lib/format/currency";
 import { useCreateTransaction } from "@/features/transactions/hooks/useCreateTransaction";
 import { useManualTransactionForm } from "@/features/transactions/hooks/useManualTransactionForm";
+import { useSmartDefaults } from "@/features/transactions/hooks/useSmartDefaults";
 import { ManualTransactionFields } from "@/features/transactions/components/ManualTransactionFields";
 
 const NUMPAD_KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0", "⌫"];
@@ -13,6 +14,7 @@ export default function AddPage() {
   const router = useRouter();
   const { createTransaction, saving } = useCreateTransaction();
   const form = useManualTransactionForm();
+  const { recentMerchants, getCategoryForMerchant } = useSmartDefaults();
   const amountDisplayRef = useRef<HTMLDivElement>(null);
   const [amountHidden, setAmountHidden] = useState(false);
 
@@ -67,7 +69,11 @@ export default function AddPage() {
         {form.error && <p style={{ fontSize: 13, color: "var(--color-error)" }} className="mt-2">{form.error}</p>}
       </div>
 
-      <ManualTransactionFields form={form} />
+      <ManualTransactionFields
+        form={form}
+        recentMerchants={recentMerchants}
+        getCategoryForMerchant={getCategoryForMerchant}
+      />
 
       {/* Numpad */}
       <div className="mt-auto px-5 pb-6 pt-4">

@@ -3,10 +3,21 @@ import type { ManualTransactionFormState } from "@/features/transactions/hooks/u
 
 interface ManualTransactionFieldsProps {
   form: ManualTransactionFormState;
+  recentMerchants?: string[];
+  getCategoryForMerchant?: (merchant: string) => string | null;
 }
 
-export function ManualTransactionFields({ form }: ManualTransactionFieldsProps) {
+export function ManualTransactionFields({ form, recentMerchants = [], getCategoryForMerchant }: ManualTransactionFieldsProps) {
   const inputBase = { background: "var(--color-surface-container)", color: "var(--color-on-surface)", outline: "none" };
+
+  // When the merchant input changes, auto-suggest a category if we know this merchant
+  function handleMerchantChange(value: string) {
+    form.setMerchant(value);
+    if (getCategoryForMerchant && value.trim().length > 1) {
+      const suggested = getCategoryForMerchant(value.trim());
+      if (suggested) form.setCategory(suggested);
+    }
+  }
 
   return (
     <div className="px-5 flex flex-col gap-3">
@@ -23,6 +34,29 @@ export function ManualTransactionFields({ form }: ManualTransactionFieldsProps) 
         }}
       />
 
+      {/* Recent merchant chips — shown when merchant field is empty */}
+      {recentMerchants.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <p style={{ fontSize: 12, color: "var(--color-outline)", fontWeight: 500 }}>Recent</p>
+          <div className="flex gap-2 flex-wrap">
+            {recentMerchants.map((m) => (
+              <button
+                key={m}
+                type="button"
+                onClick={() => form.applyMerchant(m, getCategoryForMerchant?.(m) ?? undefined)}
+                className="px-3 py-1.5 rounded-full text-sm font-medium transition-all"
+                style={{
+                  background: form.merchant === m ? "var(--color-primary)" : "var(--color-surface-container-high)",
+                  color: form.merchant === m ? "var(--color-on-primary)" : "var(--color-on-surface-variant)",
+                }}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-3 gap-3">
         <input type="text" placeholder="Qty (e.g. 500g)" value={form.quantity}
           onChange={(e) => form.setQuantity(e.target.value)}
@@ -35,6 +69,7 @@ export function ManualTransactionFields({ form }: ManualTransactionFieldsProps) 
           className="px-4 py-3 rounded-2xl" style={{ ...inputBase, fontSize: 14 }} />
       </div>
 
+      {/* Category — auto-suggested from merchant, always editable */}
       <select value={form.category} onChange={(e) => form.setCategory(e.target.value)}
         className="px-4 py-3 rounded-2xl" style={{ ...inputBase, fontSize: 14 }}>
         {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
@@ -42,7 +77,7 @@ export function ManualTransactionFields({ form }: ManualTransactionFieldsProps) 
 
       <div className="flex gap-2 flex-wrap">
         {PAYMENT_METHODS.map((m) => (
-          <button key={m} onClick={() => form.setPaymentMethod(m)}
+          <button key={m} type="button" onClick={() => form.setPaymentMethod(m)}
             className="px-4 py-2 rounded-full text-sm font-medium transition-all"
             style={{
               background: m === form.paymentMethod ? "var(--color-primary)" : "var(--color-surface-container)",
@@ -54,7 +89,7 @@ export function ManualTransactionFields({ form }: ManualTransactionFieldsProps) 
       </div>
 
       <input type="text" placeholder="Shop / merchant (optional)" value={form.merchant}
-        onChange={(e) => form.setMerchant(e.target.value)}
+        onChange={(e) => handleMerchantChange(e.target.value)}
         className="w-full px-4 py-3 rounded-2xl" style={{ ...inputBase, fontSize: 14 }} />
 
       <input type="text" placeholder="Notes (optional)" value={form.notes}

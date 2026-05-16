@@ -48,7 +48,13 @@ export function useOfflineFetch() {
     }
 
     try {
-      return await fetch(url, options);
+      const res = await fetch(url, options);
+      // Server-side failure (5xx) on a mutation — queue it so it survives
+      // Sheets rate limits (429) and transient 500s are the common cases
+      if (method !== "GET" && res.status >= 500) {
+        return queueMutation(method, url, options, setPendingCount);
+      }
+      return res;
     } catch {
       if (method !== "GET") {
         return queueMutation(method, url, options, setPendingCount);

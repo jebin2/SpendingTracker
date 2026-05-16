@@ -1,5 +1,5 @@
 import type { Transaction } from "@/types";
-import { getSheetsClient } from "./client";
+import { getSheetsClient, withSheetsRetry } from "./client";
 import { ensureTransactionSchema } from "./init";
 import {
   transactionToRow,
@@ -66,12 +66,14 @@ export async function appendTransaction(
 ): Promise<void> {
   const sheets = getSheetsClient(accessToken);
   await ensureTransactionSchema(sheets, sheetId);
-  await sheets.spreadsheets.values.append({
-    spreadsheetId: sheetId,
-    range: "transactions!A2",
-    valueInputOption: "RAW",
-    requestBody: { values: [transactionToRow(tx)] },
-  });
+  await withSheetsRetry(() =>
+    sheets.spreadsheets.values.append({
+      spreadsheetId: sheetId,
+      range: "transactions!A2",
+      valueInputOption: "RAW",
+      requestBody: { values: [transactionToRow(tx)] },
+    })
+  );
 }
 
 // Fetch one page of transactions, working backwards from the end of the sheet.
@@ -130,10 +132,12 @@ export async function updateTransactionField(
 
   const batchData = transactionUpdateToCells(updates, rowNumber);
   if (batchData.length > 0) {
-    await sheets.spreadsheets.values.batchUpdate({
-      spreadsheetId: sheetId,
-      requestBody: { valueInputOption: "RAW", data: batchData },
-    });
+    await withSheetsRetry(() =>
+      sheets.spreadsheets.values.batchUpdate({
+        spreadsheetId: sheetId,
+        requestBody: { valueInputOption: "RAW", data: batchData },
+      })
+    );
     // Soft deletes change the logical row set — invalidate so next update re-fetches
     if (updates.deleted) invalidateRowIndex(sheetId);
   }
