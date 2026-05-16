@@ -98,15 +98,27 @@ export default function EmailImportSettingsPage() {
   // Cleanup polling on unmount
   useEffect(() => () => stopPolling(), []);
 
-  async function saveFilters(newFilters: string[]) {
+  // Single save function — always writes the full config to prevent races
+  // between filter auto-save and the Save button.
+  async function saveConfig(filters: string[], days: number, { showSaving = false } = {}) {
+    setError("");
+    if (showSaving) setSaving(true);
     try {
-      await fetch("/api/email/config", {
+      const res = await fetch("/api/email/config", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fromContains: newFilters }),
+        body: JSON.stringify({ fromContains: filters, daysBack: days }),
       });
+      if (!res.ok) {
+        const d = await res.json();
+        setError(d.error ?? "Save failed.");
+      } else if (showSaving) {
+        await load();
+      }
     } catch {
-      setError("Network error — filter not saved.");
+      setError("Network error — please try again.");
+    } finally {
+      if (showSaving) setSaving(false);
     }
   }
 
@@ -118,35 +130,17 @@ export default function EmailImportSettingsPage() {
     setFromContains(next);
     setFilterInput("");
     filterInputRef.current?.focus();
-    void saveFilters(next);
+    void saveConfig(next, daysBack);
   }
 
   function removeFilter(f: string) {
     const next = fromContains.filter((x) => x !== f);
     setFromContains(next);
-    void saveFilters(next);
+    void saveConfig(next, daysBack);
   }
 
-  async function save() {
-    setError("");
-    setSaving(true);
-    try {
-      const res = await fetch("/api/email/config", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ daysBack }),
-      });
-      if (!res.ok) {
-        const d = await res.json();
-        setError(d.error ?? "Save failed.");
-        return;
-      }
-      await load();
-    } catch {
-      setError("Network error — please try again.");
-    } finally {
-      setSaving(false);
-    }
+  function save() {
+    void saveConfig(fromContains, daysBack, { showSaving: true });
   }
 
   async function fetchNow() {

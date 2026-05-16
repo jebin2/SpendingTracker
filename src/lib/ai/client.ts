@@ -151,15 +151,7 @@ function imageChain(): ImageFn[] {
   return [claude, gemini];
 }
 
-// Provider order matches textChain()/imageChain() rotation above
-function chainProviders(): string[] {
-  if (PRIMARY === "gemini")   return ["gemini",   "claude", "opencode"];
-  if (PRIMARY === "opencode") return ["opencode", "claude", "gemini"];
-  return                              ["claude",   "gemini", "opencode"];
-}
-
-async function runChain<T>(chain: Array<() => Promise<T>>, label: string): Promise<T> {
-  const providers = chainProviders();
+async function runChain<T>(chain: Array<() => Promise<T>>, label: string, providers: string[]): Promise<T> {
   let lastErr: unknown;
   for (let i = 0; i < chain.length; i++) {
     const provider = providers[i] ?? `provider-${i}`;
@@ -184,7 +176,11 @@ export async function generateText(
   maxTokens = 1024
 ): Promise<string> {
   const chain = textChain();
-  return runChain(chain.map((fn) => () => fn(prompt, system, maxTokens)), "text");
+  // Provider order mirrors textChain() rotation
+  const providers = PRIMARY === "gemini"   ? ["gemini",   "claude", "opencode"]
+                  : PRIMARY === "opencode" ? ["opencode", "claude", "gemini"]
+                  :                          ["claude",   "gemini", "opencode"];
+  return runChain(chain.map((fn) => () => fn(prompt, system, maxTokens)), "text", providers);
 }
 
 export async function generateWithImage(
@@ -195,7 +191,9 @@ export async function generateWithImage(
   maxTokens = 2048
 ): Promise<string> {
   const chain = imageChain();
-  return runChain(chain.map((fn) => () => fn(imageBase64, mimeType, text, system, maxTokens)), "image");
+  // OpenCode has no image support — imageChain() always returns [claude, gemini] or [gemini, claude]
+  const providers = PRIMARY === "gemini" ? ["gemini", "claude"] : ["claude", "gemini"];
+  return runChain(chain.map((fn) => () => fn(imageBase64, mimeType, text, system, maxTokens)), "image", providers);
 }
 
 export const activeProvider = PRIMARY;
