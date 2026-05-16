@@ -1,4 +1,4 @@
-import type { Transaction, TransactionStatus } from "@/types";
+import type { Transaction, TransactionStatus, RecurrencePeriod } from "@/types";
 
 // Single source of truth for the transactions sheet column layout.
 // When adding a column: add it here and nowhere else.
@@ -28,9 +28,10 @@ export const COLS = {
   receipt_id:        { index: 22, letter: "W" },
   quantity:          { index: 23, letter: "X" },
   deleted:           { index: 24, letter: "Y" },
+  recurrence:        { index: 25, letter: "Z" },
 } as const;
 
-export const LAST_COL = COLS.deleted.letter;
+export const LAST_COL = COLS.recurrence.letter;
 export const ID_RANGE = "transactions!A2:A5000";
 export const DATA_RANGE = (limit: number) => `transactions!A2:${LAST_COL}${limit + 1}`;
 
@@ -46,6 +47,7 @@ export function transactionToRow(tx: Transaction): unknown[] {
     tx.created_at, tx.updated_at,
     tx.status ?? "done", tx.receipt_url ?? "", tx.receipt_id ?? "", tx.quantity ?? "",
     tx.deleted ? "TRUE" : "",
+    tx.recurrence ?? "",
   ];
 }
 
@@ -78,6 +80,7 @@ export function rowToTransaction(r: string[]): Transaction {
     receipt_url:       row[c.receipt_url.index] || undefined,
     receipt_id:        row[c.receipt_id.index] || undefined,
     quantity:          row[c.quantity.index] || undefined,
+    recurrence:        (row[c.recurrence.index] as RecurrencePeriod) || undefined,
   };
 }
 

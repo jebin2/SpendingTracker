@@ -4,8 +4,10 @@ import {
   appendTransaction,
   downloadReceiptFromDrive,
   getTransactionById,
+  getMetaValues,
   updateTransactionField,
 } from "@/lib/sheets";
+import { sendPushNotification } from "@/lib/push";
 import type { Transaction } from "@/types";
 import type { SheetSession } from "./types";
 
@@ -97,6 +99,19 @@ export async function processReceipt(
       deleted: true,
       status: "done",
     });
+
+    // Send push notification if user has subscribed
+    const meta = await getMetaValues(session.accessToken, session.sheetId).catch(() => ({} as Record<string,string>));
+    if (meta.push_subscription) {
+      const merchant = receipt.merchant || "Receipt";
+      const total = receipt.items.reduce((s, i) => s + i.price, 0);
+      sendPushNotification(meta.push_subscription, {
+        title: `${merchant} receipt processed`,
+        body: `${receipt.items.length} item${receipt.items.length !== 1 ? "s" : ""} · ₹${Math.round(total).toLocaleString("en-IN")}`,
+        tag: "receipt-done",
+        url: "/transactions",
+      }).catch(() => {}); // fire-and-forget
+    }
 
     return { ok: true, txId: receiptId, itemCount: receipt.items.length };
   } catch (err) {

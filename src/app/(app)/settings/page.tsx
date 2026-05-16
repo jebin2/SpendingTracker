@@ -4,11 +4,13 @@ import { useSession, signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import Link from "next/link";
+import { usePushSubscription } from "@/hooks/usePushSubscription";
 
 export default function SettingsPage() {
   const { data: session } = useSession();
   const router = useRouter();
   const [showReset, setShowReset] = useState(false);
+  const push = usePushSubscription();
   const [confirmText, setConfirmText] = useState("");
   const [resetting, setResetting] = useState(false);
 
@@ -32,6 +34,7 @@ export default function SettingsPage() {
         { icon: "table_chart", label: "Google Sheet", sub: "View sheet, sync status", href: "/settings/sheet" },
         { icon: "ios_share", label: "iPhone Shortcut", sub: "Auto-log from SMS share", href: "/settings/shortcut" },
         { icon: "download", label: "Data & Export", sub: "Export CSV, clear cache", href: "/settings/data" },
+        { icon: "picture_as_pdf", label: "Import Statement", sub: "Upload bank PDF — AI extracts all transactions", href: "/import" },
       ],
     },
     {
@@ -87,6 +90,37 @@ export default function SettingsPage() {
           </div>
         </div>
       ))}
+
+      {/* Notifications */}
+      {push.supported && (
+        <div>
+          <p style={{ fontSize: 12, color: "var(--color-outline)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }} className="px-1 mb-2">Notifications</p>
+          <div className="rounded-3xl overflow-hidden border" style={{ borderColor: "var(--color-outline-variant)", background: "var(--color-surface-container-lowest)" }}>
+            <div className="flex items-center gap-4 px-5 py-4">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "var(--color-primary-fixed)" }}>
+                <span className="material-symbols-outlined" style={{ color: "var(--color-primary)", fontSize: 20 }}>notifications</span>
+              </div>
+              <div className="flex-1">
+                <p style={{ fontSize: 15, fontWeight: 500, color: "var(--color-on-surface)" }}>Receipt notifications</p>
+                <p style={{ fontSize: 13, color: "var(--color-on-surface-variant)" }}>
+                  {push.subscribed ? "Notify me when a receipt is processed" : "Get notified when receipts finish processing"}
+                </p>
+              </div>
+              <button
+                onClick={push.subscribed ? push.unsubscribe : push.subscribe}
+                disabled={push.loading}
+                className="px-4 py-2 rounded-xl font-medium text-sm"
+                style={{
+                  background: push.subscribed ? "var(--color-error-container)" : "var(--color-primary)",
+                  color: push.subscribed ? "var(--color-error)" : "var(--color-on-primary)",
+                  opacity: push.loading ? 0.6 : 1,
+                }}>
+                {push.loading ? "…" : push.subscribed ? "Turn off" : "Turn on"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Sign out + version */}
       <div>

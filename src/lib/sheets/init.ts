@@ -12,7 +12,7 @@ export const EXPECTED_HEADERS = [
   "merchant", "category", "subcategory", "item_name", "payment_method",
   "tags", "notes", "source", "raw_input", "location",
   "is_duplicate", "duplicate_ref", "created_at", "updated_at",
-  "status", "receipt_url", "receipt_id", "quantity", "deleted",
+  "status", "receipt_url", "receipt_id", "quantity", "deleted", "recurrence",
 ];
 
 // Per-sheetId cache — avoids re-fetching the header row on every appendTransaction()
@@ -26,7 +26,7 @@ export async function ensureTransactionSchema(
 
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: sheetId,
-    range: "transactions!A1:Y1",
+    range: "transactions!A1:Z1",
   });
   const current = (res.data.values?.[0] ?? []) as string[];
   if (current.length >= EXPECTED_HEADERS.length) {
@@ -36,7 +36,7 @@ export async function ensureTransactionSchema(
   // Write full header row
   await sheets.spreadsheets.values.update({
     spreadsheetId: sheetId,
-    range: "transactions!A1:Y1",
+    range: "transactions!A1:Z1",
     valueInputOption: "RAW",
     requestBody: { values: [EXPECTED_HEADERS] },
   });
@@ -95,7 +95,7 @@ export async function initSpendingSheet(
   // Headers — 25 columns (A–Y)
   await sheets.spreadsheets.values.update({
     spreadsheetId: sheetId,
-    range: "transactions!A1:Y1",
+    range: "transactions!A1:Z1",
     valueInputOption: "RAW",
     requestBody: {
       values: [[

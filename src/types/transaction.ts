@@ -1,6 +1,7 @@
 export type TransactionStatus = "queued" | "processing" | "done" | "failed";
 export type PaymentMethod = "Cash" | "UPI" | "Card" | "NetBanking" | "Other";
 export type TransactionSource = "manual" | "sms" | "email" | "receipt" | "shortcut";
+export type RecurrencePeriod = "daily" | "weekly" | "monthly" | "yearly";
 
 export interface Transaction {
   id: string;
@@ -28,6 +29,7 @@ export interface Transaction {
   receipt_id?: string;      // col W — groups all items from the same scanned receipt
   quantity?: string;        // col X — e.g. "500g", "1kg", "2 pcs"
   deleted?: boolean;        // col Y — soft delete flag
+  recurrence?: RecurrencePeriod; // col Z — recurring transaction period
 }
 
 export interface QueueItem {

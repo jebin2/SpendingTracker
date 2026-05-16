@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import type { Transaction, PaymentMethod } from "@/types";
+import type { Transaction, PaymentMethod, RecurrencePeriod } from "@/types";
 import { todayISO } from "@/lib/date/iso";
 import { safeJsonParse } from "@/lib/safeJson";
 
@@ -29,6 +29,7 @@ export function useManualTransactionForm() {
   const [date, setDate] = useState(todayISO());
   const [time, setTime] = useState(() => new Date().toTimeString().slice(0, 5));
   const [notes, setNotes] = useState("");
+  const [recurrence, setRecurrence] = useState<RecurrencePeriod | "">("");
   const [error, setError] = useState("");
   const [submitted, setSubmitted] = useState(false);
 
@@ -79,6 +80,7 @@ export function useManualTransactionForm() {
       category,
       payment_method: paymentMethod,
       notes: notes.trim() || undefined,
+      recurrence: recurrence || undefined,
       source: "manual",
       created_at: now,
       updated_at: now,
@@ -91,6 +93,7 @@ export function useManualTransactionForm() {
     merchant, setMerchant, category, setCategory: setCategoryAndSave,
     paymentMethod, setPaymentMethod: setPaymentMethodAndSave,
     date, setDate, time, setTime, notes, setNotes,
+    recurrence, setRecurrence,
     error, setError, submitted,
     displayAmount, handleAmountKey, buildTransaction, applyMerchant,
   };

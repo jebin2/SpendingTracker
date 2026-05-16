@@ -17,10 +17,12 @@ function CaptureContent() {
   const router = useRouter();
   const isOnline = useOnlineStatus();
   const [tab, setTab] = useState<"paste" | "camera">((searchParams.get("tab") as "paste" | "camera") ?? "paste");
+  // Pre-fill text when arriving from a share target (manifest share_target)
+  const sharedText = searchParams.get("text") ?? "";
   const fileRef = useRef<HTMLInputElement>(null);
   const region = typeof window !== "undefined" ? localStorage.getItem("region") ?? "" : "";
 
-  const { text, setText, parsing, parsed, parseError, resetParsed, parseText } = useSmsParser(region);
+  const { text, setText, parsing, parsed, parseError, resetParsed, parseText } = useSmsParser(region, sharedText);
   const { uploadState, uploadMsg, handleReceiptFile, resetUpload } = useReceiptUpload(region);
   const { cameraActive, videoRef, startCamera, capturePhoto, stopCamera } = useCameraCapture();
 

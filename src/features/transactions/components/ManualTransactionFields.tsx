@@ -1,4 +1,13 @@
 import { CATEGORIES, PAYMENT_METHODS } from "@/lib/constants";
+import type { RecurrencePeriod } from "@/types";
+
+const RECURRENCE_OPTIONS: { value: RecurrencePeriod | ""; label: string }[] = [
+  { value: "",        label: "One-time" },
+  { value: "daily",   label: "Daily" },
+  { value: "weekly",  label: "Weekly" },
+  { value: "monthly", label: "Monthly" },
+  { value: "yearly",  label: "Yearly" },
+];
 import type { ManualTransactionFormState } from "@/features/transactions/hooks/useManualTransactionForm";
 
 interface ManualTransactionFieldsProps {
@@ -95,6 +104,24 @@ export function ManualTransactionFields({ form, recentMerchants = [], getCategor
       <input type="text" placeholder="Notes (optional)" value={form.notes}
         onChange={(e) => form.setNotes(e.target.value)}
         className="w-full px-4 py-3 rounded-2xl" style={{ ...inputBase, fontSize: 14 }} />
+
+      {/* Recurrence */}
+      <div className="flex flex-col gap-2">
+        <p style={{ fontSize: 12, color: "var(--color-outline)", fontWeight: 500 }}>Repeat</p>
+        <div className="flex gap-2 flex-wrap">
+          {RECURRENCE_OPTIONS.map(({ value, label }) => (
+            <button key={value} type="button"
+              onClick={() => form.setRecurrence(value as RecurrencePeriod | "")}
+              className="px-4 py-2 rounded-full text-sm font-medium"
+              style={{
+                background: form.recurrence === value ? "var(--color-tertiary-container, var(--color-primary))" : "var(--color-surface-container)",
+                color: form.recurrence === value ? "var(--color-on-tertiary-container, var(--color-on-primary))" : "var(--color-on-surface-variant)",
+              }}>
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }

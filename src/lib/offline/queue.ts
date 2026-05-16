@@ -10,6 +10,14 @@ export async function enqueueOp(method: string, url: string, body: unknown): Pro
     body: JSON.stringify(body ?? null),
     created_at: Date.now(),
   });
+
+  // Register a Background Sync tag so the SW can flush the queue even if
+  // the user closes the tab before connectivity returns.
+  if (typeof navigator !== "undefined" && "serviceWorker" in navigator) {
+    navigator.serviceWorker.ready
+      .then((reg) => (reg as ServiceWorkerRegistration & { sync?: { register(tag: string): Promise<void> } }).sync?.register("flush-queue"))
+      .catch(() => {}); // Silently ignore — Background Sync is not universally supported
+  }
 }
 
 // Replay queued ops in order.

@@ -8,6 +8,10 @@ import { TransactionRow, formatINR } from "@/components/TransactionRow";
 import { useTransactions } from "@/hooks/useTransactions";
 import { getPeriodRange, type Period } from "@/lib/date/periods";
 import { TransactionSheet } from "@/components/transactions/TransactionSheet";
+import { SpendingChart } from "@/components/SpendingChart";
+import { useDueRecurring } from "@/features/transactions/hooks/useRecurringTransactions";
+import { useCreateTransaction } from "@/features/transactions/hooks/useCreateTransaction";
+import { todayISO } from "@/lib/date/iso";
 import type { Transaction } from "@/types";
 
 export default function DashboardPage() {
@@ -45,6 +49,8 @@ export default function DashboardPage() {
   const topCategories = Object.entries(byCategory).sort(([, a], [, b]) => b - a).slice(0, 3);
 
   const recent = [...filtered].sort((a, b) => b.date.localeCompare(a.date) || b.time.localeCompare(a.time)).slice(0, 5);
+  const dueRecurring = useDueRecurring(transactions);
+  const { createTransaction } = useCreateTransaction();
 
   return (
     <div className="max-w-2xl mx-auto px-5 pt-6 pb-8 flex flex-col gap-5">
@@ -99,6 +105,52 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* Spending chart */}
+      <SpendingChart
+        transactions={filtered}
+        from={from}
+        to={to}
+        period={period}
+        totalSpent={totalSpent}
+      />
+
+      {/* Recurring due card */}
+      {dueRecurring.length > 0 && (
+        <div className="flex flex-col gap-2">
+          <p style={{ fontSize: 14, fontWeight: 600, color: "var(--color-on-surface)" }}>Recurring due</p>
+          {dueRecurring.map(({ template, dueDate, overdueDays }) => (
+            <div key={`${template.id}-${dueDate}`} className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border"
+              style={{ borderColor: overdueDays > 0 ? "var(--color-error)" : "var(--color-outline-variant)", background: "var(--color-surface-container-lowest)" }}>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium truncate" style={{ fontSize: 14, color: "var(--color-on-surface)" }}>
+                  {template.item_name || template.merchant}
+                </p>
+                <p style={{ fontSize: 12, color: overdueDays > 0 ? "var(--color-error)" : "var(--color-on-surface-variant)" }}>
+                  {overdueDays === 0 ? "Due today" : `${overdueDays}d overdue`} · {formatINR(template.amount)}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  const now = new Date().toISOString();
+                  createTransaction({
+                    ...template,
+                    id: crypto.randomUUID(),
+                    date: todayISO(),
+                    time: new Date().toTimeString().slice(0, 5),
+                    created_at: now,
+                    updated_at: now,
+                    status: "done",
+                  });
+                }}
+                className="px-3 py-1.5 rounded-xl font-medium text-sm flex-shrink-0"
+                style={{ background: "var(--color-primary)", color: "var(--color-on-primary)" }}>
+                Log it
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Duplicate alert */}
       {duplicates.length > 0 && (
