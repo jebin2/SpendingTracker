@@ -39,7 +39,7 @@ info "Node.js $(node -v)"
 step "PM2"
 if ! command -v pm2 &>/dev/null; then
   warn "PM2 not found — installing..."
-  npm install -g pm2
+  npm install -g pm2 2>/dev/null || sudo npm install -g pm2
 fi
 info "PM2 $(pm2 --version)"
 
