@@ -69,7 +69,10 @@ info "Dependencies installed"
 
 # ── 5. Build ──────────────────────────────────────────────────────────────────
 step "Build"
-npm run build 2>&1 | tail -5
+# Always clean .next first — stale output from a previous failed/partial
+# build (e.g. built with wrong Node version) causes runtime ENOENT errors.
+rm -rf "$APP_DIR/.next"
+npm run build
 info "Build complete"
 
 # ── 6. Start / restart with PM2 ───────────────────────────────────────────────
