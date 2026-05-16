@@ -68,12 +68,12 @@ export const POST = withSession("POST parse statement", async (_session, req) =>
   const jsonMatch = block.text.match(/\{[\s\S]*\}/);
   if (!jsonMatch) return NextResponse.json({ error: "Could not parse AI response" }, { status: 500 });
 
-  const parsed = JSON.parse(jsonMatch[0]) as {
-    transactions: {
-      date: string; amount: number; merchant: string;
-      category: string; payment_method: string; notes: string | null;
-    }[];
-  };
+  let parsed: { transactions: { date: string; amount: number; merchant: string; category: string; payment_method: string; notes: string | null }[] };
+  try {
+    parsed = JSON.parse(jsonMatch[0]) as typeof parsed;
+  } catch {
+    return NextResponse.json({ error: "Could not parse AI response" }, { status: 500 });
+  }
 
   return NextResponse.json({ transactions: parsed.transactions ?? [] });
 });

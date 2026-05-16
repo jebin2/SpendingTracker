@@ -1,11 +1,16 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 
 // Module-level guard — prevents double-wrapping fetch in React StrictMode dev
 let fetchIntercepted = false;
 
 export function useFetchInterceptor(onUnauthorized: () => void) {
+  // Keep a stable ref so the closure always calls the current callback,
+  // even though the effect runs only once (fetchIntercepted guard).
+  const onUnauthorizedRef = useRef(onUnauthorized);
+  onUnauthorizedRef.current = onUnauthorized;
+
   useEffect(() => {
     if (fetchIntercepted) return;
     fetchIntercepted = true;
@@ -20,7 +25,7 @@ export function useFetchInterceptor(onUnauthorized: () => void) {
         input instanceof URL ? input.pathname :
         "";
       if (res.status === 401 && url.includes("/api/")) {
-        onUnauthorized();
+        onUnauthorizedRef.current();
       }
       return res;
     };

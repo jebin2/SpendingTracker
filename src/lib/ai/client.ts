@@ -113,8 +113,12 @@ async function opencodeText(prompt: string, system: string): Promise<string> {
     if (!pollRes.ok) throw new Error(`OpenCode poll failed: ${pollRes.status}`);
     const task = await pollRes.json();
     if (task.status === "completed") {
-      const result = JSON.parse(task.result);
-      return result.response ?? "";
+      try {
+        const result = JSON.parse(task.result as string) as { response?: string };
+        return result.response ?? "";
+      } catch {
+        throw new Error("OpenCode returned invalid JSON");
+      }
     }
     if (task.status === "failed") throw new Error(`OpenCode task failed: ${task.error}`);
   }

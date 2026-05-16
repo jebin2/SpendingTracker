@@ -33,12 +33,17 @@ async function readCachedAnalysis(
   if (!summaryJson && cached.drive_file_id) {
     summaryJson = await getAnalysisFromDrive(session.accessToken, cached.drive_file_id);
   }
+  if (!summaryJson) return { status: "not_started" }; // cache row exists but data missing
 
-  return {
-    status: "done",
-    analysis: JSON.parse(summaryJson) as AnalysisResult,
-    generated_at: cached.generated_at,
-  };
+  try {
+    return {
+      status: "done",
+      analysis: JSON.parse(summaryJson) as AnalysisResult,
+      generated_at: cached.generated_at,
+    };
+  } catch {
+    return { status: "failed" };
+  }
 }
 
 

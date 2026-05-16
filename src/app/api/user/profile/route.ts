@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { withSession } from "@/server/http/withSession";
 import { getMetaValues, setMetaValue } from "@/lib/sheets";
 import { auth } from "@/lib/auth";
+import { safeJsonParse } from "@/lib/safeJson";
 
 export const GET = withSession("GET profile", async (session) => {
   const { accessToken, sheetId } = session;
@@ -10,7 +11,7 @@ export const GET = withSession("GET profile", async (session) => {
   return NextResponse.json({
     name: meta.name ?? nextAuthSession?.user?.name ?? "",
     region: meta.region ?? "",
-    lifestyle_tags: meta.lifestyle_tags ? JSON.parse(meta.lifestyle_tags) : [],
+    lifestyle_tags: safeJsonParse<string[]>(meta.lifestyle_tags ?? null, []),
     monthly_income: meta.monthly_income ? parseFloat(meta.monthly_income) : null,
     shortcut_token: meta.shortcut_token ?? "",
     shortcut_last_used: meta.shortcut_last_used ?? "",

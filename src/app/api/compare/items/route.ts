@@ -60,7 +60,12 @@ export const GET = withSession("GET compare items", async (session) => {
   const cached = await getAnalysisCache(accessToken, sheetId, cacheKey, Infinity);
   let groups: { canonical: string; variants: string[] }[];
   if (cached?.status === "done" && cached.summary_json) {
-    groups = JSON.parse(cached.summary_json);
+    try {
+      groups = JSON.parse(cached.summary_json);
+    } catch {
+      groups = await normalizeItemNames(uniqueNames);
+      await upsertAnalysisCacheRow(accessToken, sheetId, cacheKey, "item_norm", "done", JSON.stringify(groups));
+    }
   } else {
     groups = await normalizeItemNames(uniqueNames);
     await upsertAnalysisCacheRow(accessToken, sheetId, cacheKey, "item_norm", "done", JSON.stringify(groups));

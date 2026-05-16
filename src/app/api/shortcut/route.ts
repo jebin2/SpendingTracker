@@ -14,12 +14,12 @@ export async function POST(req: NextRequest) {
   }
 
   const token = auth.slice(7);
-  let payload: { userId: string; sheetId: string; region?: string };
+  let payload: { email: string; sheetId: string; region?: string };
 
   try {
     const { payload: p } = await jwtVerify(token, SECRET);
     payload = p as typeof payload;
-    if (!payload.userId || !payload.sheetId) throw new Error("Invalid payload");
+    if (!payload.email || !payload.sheetId) throw new Error("Invalid payload");
   } catch {
     return NextResponse.json({ error: "Invalid token" }, { status: 401 });
   }

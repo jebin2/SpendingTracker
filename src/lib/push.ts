@@ -23,6 +23,11 @@ export async function sendPushNotification(
 ): Promise<void> {
   if (!publicKey || !privateKey) return; // VAPID not configured — skip silently
 
-  const subscription = JSON.parse(subscriptionJson) as webpush.PushSubscription;
+  let subscription: webpush.PushSubscription;
+  try {
+    subscription = JSON.parse(subscriptionJson) as webpush.PushSubscription;
+  } catch {
+    return; // Corrupted subscription stored in meta — skip silently
+  }
   await webpush.sendNotification(subscription, JSON.stringify(payload));
 }
