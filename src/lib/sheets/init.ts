@@ -17,6 +17,40 @@ export const EXPECTED_HEADERS = [
 
 // Per-sheetId cache — avoids re-fetching the header row on every appendTransaction()
 const schemaChecked = new Set<string>();
+const parsedEmailsTabChecked = new Set<string>();
+
+// Auto-creates the parsed_emails tab for users whose sheet predates the feature.
+// Safe to call multiple times — cached per sheetId.
+export async function ensureParsedEmailsTab(
+  sheets: ReturnType<typeof getSheetsClient>,
+  sheetId: string
+): Promise<void> {
+  if (parsedEmailsTabChecked.has(sheetId)) return;
+
+  try {
+    await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: "parsed_emails!A1" });
+    parsedEmailsTabChecked.add(sheetId);
+    return;
+  } catch {
+    // Tab doesn't exist yet — fall through to create it
+  }
+
+  // Add the tab (ignore error if it already exists due to a race)
+  await sheets.spreadsheets.batchUpdate({
+    spreadsheetId: sheetId,
+    requestBody: { requests: [{ addSheet: { properties: { title: "parsed_emails" } } }] },
+  }).catch(() => {});
+
+  // Write header
+  await sheets.spreadsheets.values.update({
+    spreadsheetId: sheetId,
+    range: "parsed_emails!A1:F1",
+    valueInputOption: "RAW",
+    requestBody: { values: [["email_id", "from", "subject", "parsed_at", "status", "tx_ids"]] },
+  }).catch(() => {});
+
+  parsedEmailsTabChecked.add(sheetId);
+}
 
 export async function ensureTransactionSchema(
   sheets: ReturnType<typeof google.sheets>,
@@ -64,8 +98,9 @@ export async function initSpendingSheet(
     const sheetId = file.id!;
     const sheetUrl = file.webViewLink
       ?? `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
-    // Migrate header for existing sheets (adds receipt_id, quantity, deleted if missing)
+    // Migrate existing sheets — add missing columns and tabs
     await ensureTransactionSchema(sheets, sheetId).catch(() => {});
+    await ensureParsedEmailsTab(sheets, sheetId).catch(() => {});
     return { sheetId, sheetUrl, isNew: false };
   }
 

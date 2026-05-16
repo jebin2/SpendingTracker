@@ -1,4 +1,5 @@
 import { getSheetsClient, withSheetsRetry } from "./client";
+import { ensureParsedEmailsTab } from "./init";
 
 // ── parsed_emails sheet ───────────────────────────────────────────────────────
 // Columns: email_id | from | subject | parsed_at | status | tx_ids
@@ -20,8 +21,14 @@ const RANGE = "parsed_emails!A2:F";
 const COLS = { emailId: 0, from: 1, subject: 2, parsedAt: 3, status: 4, txIds: 5 };
 
 async function getAllRows(sheets: ReturnType<typeof getSheetsClient>, sheetId: string): Promise<string[][]> {
-  const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: RANGE });
-  return (res.data.values ?? []) as string[][];
+  try {
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId: sheetId, range: RANGE });
+    return (res.data.values ?? []) as string[][];
+  } catch {
+    // Tab missing for users whose sheet predates this feature — create it and return empty
+    await ensureParsedEmailsTab(sheets, sheetId).catch(() => {});
+    return [];
+  }
 }
 
 // Load ALL processed email IDs into a Set — call ONCE per job run,
