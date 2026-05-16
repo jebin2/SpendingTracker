@@ -146,6 +146,7 @@ export async function runEmailImportJob(session: SheetSession, { manual = false 
   if (config.runningAt) {
     const ageMs = Date.now() - new Date(config.runningAt).getTime();
     if (ageMs < 5 * 60 * 1000) {
+      console.log("[email-import] already running — skipping");
       return { scanned: 0, imported: 0, skipped: 0, failed: 0 };
     }
   }
@@ -154,10 +155,14 @@ export async function runEmailImportJob(session: SheetSession, { manual = false 
   await setMetaValue(session.accessToken, session.sheetId, "email_import_running_at", new Date().toISOString()).catch(() => {});
 
   try {
+  const tag = manual ? "manual" : "auto";
+  console.log(`[email-import] started (${tag}) filters=${config.fromContains.join(",")}`);
+
   const gmail = getGmailClient(session.accessToken);
   // Manual fetch always uses daysBack so the user gets the lookback they configured.
   // Auto daily trigger uses lastRun so only new emails are fetched.
   const query = buildGmailQuery(config.fromContains, config.daysBack, manual ? undefined : config.lastRun);
+  console.log(`[email-import] gmail query: ${query}`);
 
   // Fetch message IDs matching the query (max 100 per run)
   let messageIds: string[] = [];
@@ -168,9 +173,12 @@ export async function runEmailImportJob(session: SheetSession, { manual = false 
       maxResults: 100,
     });
     messageIds = (listRes.data.messages ?? []).map((m) => m.id!).filter(Boolean);
-  } catch {
+  } catch (err) {
+    console.error("[email-import] gmail list failed:", err);
     return { scanned: 0, imported: 0, skipped: 0, failed: 0 };
   }
+
+  console.log(`[email-import] found ${messageIds.length} emails`);
 
   // Load all previously-processed email IDs once — avoids N+1 Sheets API calls
   const processedIds = await getProcessedEmailIds(session.accessToken, session.sheetId).catch(() => new Set<string>());
@@ -218,6 +226,7 @@ export async function runEmailImportJob(session: SheetSession, { manual = false 
     );
 
     if (!transaction) {
+      console.log(`[email-import] skipped "${subject}" — ${skipReason}`);
       await recordParsedEmail(session.accessToken, session.sheetId, {
         emailId: msgId, from, subject,
         parsedAt: new Date().toISOString(),
@@ -255,6 +264,7 @@ export async function runEmailImportJob(session: SheetSession, { manual = false 
       parsedAt: now, status: "parsed", txIds: [tx.id],
     }).catch(() => {});
 
+    console.log(`[email-import] imported ₹${tx.amount} @ ${tx.merchant} (${tx.category}) from "${subject}"`);
     result.imported++;
   }
 
@@ -267,6 +277,7 @@ export async function runEmailImportJob(session: SheetSession, { manual = false 
     setMetaValue(session.accessToken, session.sheetId, "email_import_tx_count", String(config.txCount + result.imported)),
   ]).catch(() => {});
 
+  console.log(`[email-import] done — scanned:${result.scanned} imported:${result.imported} skipped:${result.skipped} failed:${result.failed}`);
   return result;
   } finally {
     // Always clear the running marker — whether job succeeded, failed, or threw
