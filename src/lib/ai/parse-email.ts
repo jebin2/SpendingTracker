@@ -116,7 +116,11 @@ function validate(raw: RawParsed, todayDate: string): ParsedTransaction | null {
   const txDate = new Date(dateStr + "T00:00:00");
   const today = new Date(todayDate + "T00:00:00");
   const twoYearsAgo = new Date(today); twoYearsAgo.setFullYear(today.getFullYear() - 2);
-  if (txDate > today || txDate < twoYearsAgo) return null;
+  // Allow up to 1 day in the "future" to cover users in timezones ahead of
+  // the server UTC clock (e.g. IST is UTC+5:30, so emails at midnight IST
+  // carry a date that looks "tomorrow" from the server's UTC perspective).
+  const tomorrow = new Date(today); tomorrow.setDate(today.getDate() + 1);
+  if (txDate > tomorrow || txDate < twoYearsAgo) return null;
 
   const rawPM = typeof raw.payment_method === "string" ? raw.payment_method : "Other";
   const payment_method: PaymentMethod = VALID_PAYMENT_METHODS.includes(rawPM as PaymentMethod)
