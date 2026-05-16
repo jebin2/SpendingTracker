@@ -74,13 +74,18 @@ info "Build complete"
 
 # ── 6. Start / restart with PM2 ───────────────────────────────────────────────
 step "PM2 process"
-if pm2 describe "$APP_NAME" &>/dev/null; then
-  info "Restarting existing PM2 process '$APP_NAME'..."
-  pm2 restart "$APP_NAME" --update-env
-else
+
+# Always recreate process cleanly
+pm2 delete "$APP_NAME" 2>/dev/null || true
+
   info "Starting '$APP_NAME' on port $PORT..."
-  pm2 start npm --name "$APP_NAME" --env production -- start -- -p "$PORT"
-fi
+
+pm2 start npm \
+  --name "$APP_NAME" \
+  --cwd "$APP_DIR" \
+  --time \
+  -- start -- -p "$PORT"
+
 pm2 save
 
 # Register PM2 as a systemd service so the app survives reboots.
