@@ -112,6 +112,9 @@ export default function EmailImportSettingsPage() {
     setError("");
     setJobState("running");
     try {
+      // Flush any unsaved daysBack (user may have changed it without blurring)
+      // before triggering the job — the server reads config at job start time.
+      await saveConfig(fromContains, daysBack);
       const res = await fetch("/api/email/fetch?manual=1", { method: "POST" });
       if (!res.ok) { setJobState("idle"); setError("Could not start fetch — please try again."); return; }
       startPolling();

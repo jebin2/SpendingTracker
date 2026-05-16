@@ -3,6 +3,7 @@ import Google from "next-auth/providers/google";
 import type { NextAuthConfig } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import { initSpendingSheet } from "@/lib/sheets";
+import { log } from "@/lib/logger";
 
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
@@ -27,7 +28,7 @@ async function refreshAccessToken(token: JWT): Promise<JWT> {
       error: undefined,
     };
   } catch (e) {
-    console.error("Failed to refresh access token:", e);
+    log.error("auth", "failed to refresh access token", e);
     return { ...token, error: "RefreshTokenError" as const };
   }
 }
@@ -70,7 +71,7 @@ export const authConfig: NextAuthConfig = {
           token.sheet_id = sheetId;
           token.sheet_is_new = isNew;
         } catch (e) {
-          console.error("Failed to init sheet during sign-in:", e);
+          log.error("auth", "failed to init sheet during sign-in", e);
         }
         return token;
       }
