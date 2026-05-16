@@ -46,7 +46,7 @@ export function ReceiptItemsPopup({ receiptId, onClose }: { receiptId: string; o
   const total = items.reduce((s, t) => s + t.amount, 0);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}
+    <div className="fixed inset-0 z-[80] flex items-end justify-center" style={{ background: "rgba(0,0,0,0.4)", backdropFilter: "blur(4px)" }}
       onClick={onClose}>
       <div className="w-full max-w-lg rounded-t-3xl overflow-hidden"
         style={{ background: "var(--color-surface)", maxHeight: "80vh", display: "flex", flexDirection: "column" }}
