@@ -1,5 +1,5 @@
 export { offlineDb } from "./db";
-export { enqueueOp, flushQueue, pendingCount, isFlushing } from "./queue";
+export { enqueueOp, flushQueue, pendingCount, isFlushing, conflictCount, clearConflicts } from "./queue";
 export {
   getLocalTransactions,
   pullTransactions,

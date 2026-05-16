@@ -13,6 +13,32 @@ import {
 
 export const PAGE_SIZE = 200;
 
+// In-memory row-index cache: sheetId → Map<txId, 1-based sheet row number>
+// Invalidated whenever a row is appended (row numbers shift for nothing — appends
+// add to the end, so existing row numbers remain valid; only invalidate on delete).
+const rowIndexCache = new Map<string, Map<string, number>>();
+
+async function getRowIndexMap(
+  sheets: ReturnType<typeof getSheetsClient>,
+  sheetId: string
+): Promise<Map<string, number>> {
+  if (rowIndexCache.has(sheetId)) return rowIndexCache.get(sheetId)!;
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: sheetId,
+    range: ID_RANGE,
+  });
+  const map = new Map<string, number>();
+  (res.data.values ?? []).forEach((r, i) => {
+    if (r[0]) map.set(String(r[0]), i + 2); // +2: 1-indexed + header row
+  });
+  rowIndexCache.set(sheetId, map);
+  return map;
+}
+
+function invalidateRowIndex(sheetId: string) {
+  rowIndexCache.delete(sheetId);
+}
+
 export interface TransactionPage {
   transactions: Transaction[];
   total: number;       // total data rows in sheet (excludes header, includes soft-deleted)
@@ -98,22 +124,18 @@ export async function updateTransactionField(
   updates: Partial<Transaction>
 ): Promise<void> {
   const sheets = getSheetsClient(accessToken);
+  const indexMap = await getRowIndexMap(sheets, sheetId);
+  const rowNumber = indexMap.get(txId);
+  if (!rowNumber) return;
 
-  const res = await sheets.spreadsheets.values.get({
-    spreadsheetId: sheetId,
-    range: ID_RANGE,
-  });
-
-  const rows = res.data.values ?? [];
-  const rowIndex = rows.findIndex((r) => r[0] === txId);
-  if (rowIndex < 0) return;
-
-  const batchData = transactionUpdateToCells(updates, rowIndex + 2);
+  const batchData = transactionUpdateToCells(updates, rowNumber);
   if (batchData.length > 0) {
     await sheets.spreadsheets.values.batchUpdate({
       spreadsheetId: sheetId,
       requestBody: { valueInputOption: "RAW", data: batchData },
     });
+    // Soft deletes change the logical row set — invalidate so next update re-fetches
+    if (updates.deleted) invalidateRowIndex(sheetId);
   }
 }
 

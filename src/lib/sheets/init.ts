@@ -15,16 +15,24 @@ export const EXPECTED_HEADERS = [
   "status", "receipt_url", "receipt_id", "quantity", "deleted",
 ];
 
+// Per-sheetId cache — avoids re-fetching the header row on every appendTransaction()
+const schemaChecked = new Set<string>();
+
 export async function ensureTransactionSchema(
   sheets: ReturnType<typeof google.sheets>,
   sheetId: string
 ) {
+  if (schemaChecked.has(sheetId)) return;
+
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: sheetId,
     range: "transactions!A1:Y1",
   });
   const current = (res.data.values?.[0] ?? []) as string[];
-  if (current.length >= EXPECTED_HEADERS.length) return; // already up to date
+  if (current.length >= EXPECTED_HEADERS.length) {
+    schemaChecked.add(sheetId);
+    return;
+  }
   // Write full header row
   await sheets.spreadsheets.values.update({
     spreadsheetId: sheetId,
@@ -32,6 +40,7 @@ export async function ensureTransactionSchema(
     valueInputOption: "RAW",
     requestBody: { values: [EXPECTED_HEADERS] },
   });
+  schemaChecked.add(sheetId);
 }
 
 export async function initSpendingSheet(

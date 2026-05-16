@@ -8,6 +8,7 @@ import { BottomNav } from "@/components/layout/BottomNav";
 import { FAB } from "@/components/layout/FAB";
 import { PullToRefresh } from "@/components/layout/PullToRefresh";
 import { SyncProvider } from "@/providers/SyncProvider";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { useOnlineStatus } from "@/hooks/useOnlineStatus";
 import { useFetchInterceptor } from "@/hooks/useFetchInterceptor";
 import { useTransactionsStore } from "@/store/transactionsStore";
@@ -60,7 +61,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <SyncProvider>
-      <AppShell session={session}>{children}</AppShell>
+      <ErrorBoundary>
+        <AppShell session={session}>{children}</AppShell>
+      </ErrorBoundary>
     </SyncProvider>
   );
 }
@@ -74,6 +77,8 @@ function AppShell({
 }) {
   const isOnline = useOnlineStatus();
   const pendingCount = useNetworkStore((s) => s.pendingCount);
+  const conflictCount = useNetworkStore((s) => s.conflictCount);
+  const setConflictCount = useNetworkStore((s) => s.setConflictCount);
   const setTransactions = useTransactionsStore((s) => s.setTransactions);
 
   const handleRefresh = useCallback(async () => {
@@ -108,6 +113,16 @@ function AppShell({
   return (
     <div style={{ minHeight: "100dvh", background: "var(--color-background)" }}>
       <TopNav userName={session.user?.name ?? ""} userImage={session.user?.image ?? ""} />
+
+      {/* Conflict banner — shown when offline ops failed to apply */}
+      {conflictCount > 0 && isOnline && pendingCount === 0 && (
+        <div className="fixed top-0 md:top-16 left-0 w-full z-40 flex items-center justify-center gap-2 py-1.5"
+          style={{ background: "var(--color-error-container)", color: "var(--color-on-error-container)", fontSize: 13, fontWeight: 500 }}>
+          <span className="material-symbols-outlined" style={{ fontSize: 16 }}>warning</span>
+          {`${conflictCount} offline change${conflictCount > 1 ? "s" : ""} couldn't be applied`}
+          <button onClick={() => setConflictCount(0)} className="ml-2 underline" style={{ fontSize: 12 }}>Dismiss</button>
+        </div>
+      )}
 
       {/* Status banner — offline or syncing pending ops */}
       {(!isOnline || pendingCount > 0) && (

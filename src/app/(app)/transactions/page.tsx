@@ -22,6 +22,7 @@ import { DuplicateGroupsList } from "@/features/transactions/components/Duplicat
 import { SuggestionsSheet } from "@/features/transactions/components/SuggestionsSheet";
 import { DuplicateGroupSheet } from "@/features/transactions/components/DuplicateGroupSheet";
 import { receiptsApi } from "@/lib/api/receipts";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 function TransactionsContent() {
   const searchParams = useSearchParams();
@@ -105,6 +106,7 @@ function TransactionsContent() {
         />
       ) : (
         <>
+          <ErrorBoundary>
           <TransactionGroups
             sortedDates={sortedDates}
             groups={groups}
@@ -118,6 +120,8 @@ function TransactionsContent() {
               loadData();
             }}
           />
+
+          </ErrorBoundary>
 
           {/* Load more — only shown when no active filters (filters work on loaded data) */}
           {hasMore && !search && !filterCat && !datePreset && !showDupsOnly && (

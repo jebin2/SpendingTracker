@@ -8,11 +8,12 @@ import {
   pullTransactions,
   flushQueue,
   pendingCount,
+  conflictCount,
 } from "@/lib/offline";
 
 export function useSyncEffect() {
   const { setTransactions, setSyncing } = useTransactionsStore();
-  const { setOnline, setPendingCount } = useNetworkStore();
+  const { setOnline, setPendingCount, setConflictCount } = useNetworkStore();
 
   async function sync() {
     if (useTransactionsStore.getState().syncing) return;
@@ -21,7 +22,7 @@ export function useSyncEffect() {
       const { transactions, total, hasMore } = await pullTransactions(1);
       setTransactions(transactions, total, hasMore);
     } catch (err) {
-      if (err instanceof Error && err.message === "auth_expired") return;
+      if (err instanceof Error && (err.message === "auth_expired" || err.message === "aborted")) return;
     } finally {
       setSyncing(false);
     }
@@ -38,6 +39,8 @@ export function useSyncEffect() {
       if (count === 0 || count === lastCount) break;
       lastCount = count;
     }
+    // Refresh conflict count after flush — new conflicts may have been recorded
+    setConflictCount(await conflictCount());
     await sync();
   }
 
@@ -49,6 +52,8 @@ export function useSyncEffect() {
         if (localTxs.length > 0) setTransactions(localTxs, localTxs.length, false);
         const count = await pendingCount();
         if (count > 0) setPendingCount(count);
+        const conflicts = await conflictCount();
+        if (conflicts > 0) setConflictCount(conflicts);
       } catch (err) {
         console.error("SyncProvider: failed to load local data:", err);
       }

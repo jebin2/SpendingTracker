@@ -1,11 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Set AI_PROVIDER=gemini in .env.local to switch; defaults to claude
-const PROVIDER = (process.env.AI_PROVIDER ?? "opencode").toLowerCase();
+// Set AI_PROVIDER=gemini in .env.local to switch; defaults to opencode
+const PRIMARY = (process.env.AI_PROVIDER ?? "opencode").toLowerCase();
 
-const CLAUDE_MODEL = process.env.AI_MODEL ?? "claude-sonnet-4-6";
-const GEMINI_MODEL = process.env.AI_MODEL ?? "gemini-3-flash-preview";
+const CLAUDE_MODEL  = process.env.AI_MODEL ?? "claude-sonnet-4-6";
+const GEMINI_MODEL  = process.env.AI_MODEL ?? "gemini-3-flash-preview";
 
 // ── Claude ────────────────────────────────────────────────────────────────────
 
@@ -65,8 +65,7 @@ async function withGeminiRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T>
       const status = (err as { status?: number }).status;
       const isRetryable = status === 503 || status === 429;
       if (isRetryable && attempt < retries) {
-        const delay = 2000 * Math.pow(2, attempt); // 2s, 4s, 8s
-        await new Promise((r) => setTimeout(r, delay));
+        await new Promise((r) => setTimeout(r, 2000 * Math.pow(2, attempt)));
         continue;
       }
       throw err;
@@ -122,6 +121,44 @@ async function opencodeText(prompt: string, system: string): Promise<string> {
   throw new Error("OpenCode task timed out after 120s");
 }
 
+// ── Provider chains ───────────────────────────────────────────────────────────
+
+type TextFn  = (prompt: string, system: string, maxTokens: number) => Promise<string>;
+type ImageFn = (b64: string, mime: "image/jpeg" | "image/png" | "image/webp", text: string, system: string, maxTokens: number) => Promise<string>;
+
+function textChain(): TextFn[] {
+  const all: TextFn[] = [
+    (p, s, t) => claudeText(p, s, t),
+    (p, s)    => geminiText(p, s),
+    (p, s)    => opencodeText(p, s),
+  ];
+  // Rotate so primary is first
+  if (PRIMARY === "gemini")    return [all[1], all[0], all[2]];
+  if (PRIMARY === "opencode")  return [all[2], all[0], all[1]];
+  return all; // claude first
+}
+
+function imageChain(): ImageFn[] {
+  const claude: ImageFn = (b, m, t, s, tok) => claudeImage(b, m, t, s, tok);
+  const gemini: ImageFn = (b, m, t, s)      => geminiImage(b, m, t, s);
+  // OpenCode has no image support — omit from chain
+  if (PRIMARY === "gemini") return [gemini, claude];
+  return [claude, gemini];
+}
+
+async function runChain<T>(chain: Array<() => Promise<T>>): Promise<T> {
+  let lastErr: unknown;
+  for (const fn of chain) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      console.warn("AI provider failed, trying next:", err instanceof Error ? err.message : err);
+    }
+  }
+  throw lastErr;
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export async function generateText(
@@ -129,9 +166,8 @@ export async function generateText(
   system: string,
   maxTokens = 1024
 ): Promise<string> {
-  if (PROVIDER === "gemini") return geminiText(prompt, system);
-  if (PROVIDER === "opencode") return opencodeText(prompt, system);
-  return claudeText(prompt, system, maxTokens);
+  const chain = textChain();
+  return runChain(chain.map((fn) => () => fn(prompt, system, maxTokens)));
 }
 
 export async function generateWithImage(
@@ -141,9 +177,8 @@ export async function generateWithImage(
   system: string,
   maxTokens = 2048
 ): Promise<string> {
-  if (PROVIDER === "gemini") return geminiImage(imageBase64, mimeType, text, system);
-  if (PROVIDER === "opencode") throw new Error("OpenCode does not support image inputs");
-  return claudeImage(imageBase64, mimeType, text, system, maxTokens);
+  const chain = imageChain();
+  return runChain(chain.map((fn) => () => fn(imageBase64, mimeType, text, system, maxTokens)));
 }
 
-export const activeProvider = PROVIDER;
+export const activeProvider = PRIMARY;

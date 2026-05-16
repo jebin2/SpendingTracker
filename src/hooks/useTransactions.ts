@@ -25,7 +25,11 @@ export function useTransactions() {
       setTransactions(txs, t, hm);
       currentPageRef.current = 1;
       return txs;
-    } catch {
+    } catch (err) {
+      // "aborted" = a newer refresh() cancelled this one — not an error
+      if (!(err instanceof Error && err.message === "aborted")) {
+        return useTransactionsStore.getState().transactions;
+      }
       return useTransactionsStore.getState().transactions;
     } finally {
       setSyncing(false);

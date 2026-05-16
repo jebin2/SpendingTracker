@@ -42,7 +42,11 @@ export async function flushQueue(): Promise<{ authExpired: boolean }> {
         }
 
         if (res.status >= 400 && res.status < 500) {
-          // Client error — will never succeed, discard
+          // Client error — will never succeed; record for user visibility then discard
+          await offlineDb.conflicts.add({
+            method: op.method, url: op.url, body: op.body,
+            statusCode: res.status, failed_at: Date.now(),
+          });
           await offlineDb.queue.delete(op.id!);
           continue;
         }
@@ -69,4 +73,12 @@ export async function pendingCount(): Promise<number> {
 // preventing PATCH/DELETE from racing a concurrent POST on the server.
 export function isFlushing(): boolean {
   return flushing;
+}
+
+export async function conflictCount(): Promise<number> {
+  return offlineDb.conflicts.count();
+}
+
+export async function clearConflicts(): Promise<void> {
+  await offlineDb.conflicts.clear();
 }
