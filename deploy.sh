@@ -83,12 +83,12 @@ else
 fi
 pm2 save
 
+# Register PM2 as a systemd service so the app survives reboots.
+# pm2 startup prints the exact sudo command needed — run it automatically.
 STARTUP_CMD=$(pm2 startup 2>&1 | grep "sudo" || true)
 if [ -n "$STARTUP_CMD" ]; then
-  warn "Run this once to enable auto-start on reboot:"
-  echo ""
-  echo "    $STARTUP_CMD"
-  echo ""
+  eval "$STARTUP_CMD" && info "PM2 registered as systemd service (auto-start on reboot)" \
+    || warn "Could not register PM2 startup — run manually: $STARTUP_CMD"
 fi
 
 # ── 7. Cloudflare Tunnel ──────────────────────────────────────────────────────
