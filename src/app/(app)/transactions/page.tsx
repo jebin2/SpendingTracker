@@ -82,8 +82,8 @@ function TransactionsContent() {
     <div className="max-w-2xl mx-auto px-5 pt-6 flex flex-col gap-4 overflow-hidden"
       style={{ height: "calc(100dvh - 96px)" }}>
 
-      <div className="hidden md:flex items-center justify-between flex-shrink-0">
-        <h1 className="font-bold" style={{ fontSize: 24, color: "var(--color-on-background)" }}>Transactions</h1>
+      <div className="flex items-center justify-between flex-shrink-0">
+        <h1 className="hidden md:block font-bold" style={{ fontSize: 24, color: "var(--color-on-background)" }}>Transactions</h1>
         {total > 0 && (
           <span style={{ fontSize: 13, color: "var(--color-on-surface-variant)" }}>
             {transactions.length} of {total}
