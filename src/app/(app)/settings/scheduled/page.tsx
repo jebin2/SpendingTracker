@@ -212,6 +212,25 @@ export default function ScheduledSettingsPage() {
           </div>
         </div>
 
+        {/* Stuck dedup warning — shown when dedup appears running but has a prior lastRun (server-restart leak) */}
+        {!loading && dedupServerRunning && status?.dedup.lastRun && (
+          <div className="rounded-2xl p-3 flex items-center gap-3" style={{ background: "#fff8e1", border: "1px solid #ffe082" }}>
+            <span className="material-symbols-outlined flex-shrink-0" style={{ color: "#f9a825", fontSize: 18 }}>warning</span>
+            <p style={{ fontSize: 13, color: "#6d4c00", flex: 1 }}>
+              Duplicate check appears stuck — possibly caused by a server restart. Tap to clear.
+            </p>
+            <button
+              onClick={async () => {
+                await fetch("/api/cron/clear", { method: "POST" });
+                await fetchStatus();
+              }}
+              className="flex-shrink-0 px-3 py-1.5 rounded-xl text-sm font-medium"
+              style={{ background: "#fff3cd", color: "#6d4c00", border: "1px solid #ffe082" }}>
+              Clear
+            </button>
+          </div>
+        )}
+
         {/* Not registered warning */}
         {!loading && !status?.registered && (
           <div className="rounded-2xl p-3 flex gap-3" style={{ background: "#fff8e1", border: "1px solid #ffe082" }}>

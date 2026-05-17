@@ -9,9 +9,15 @@ export const GET = withSession("GET cron/status", async (session) => {
     getAnalysisCacheForPeriods(session.accessToken, session.sheetId, ["week", "month", "year"]),
   ]);
 
-  const dedupRunningAt = meta.dedup_running_at || null;
+  const dedupRunningAt  = meta.dedup_running_at      || null;
+  const dedupLastRun    = meta.last_dedup_checked_at || null;
+  // Treat dedup as "still running" only if:
+  //  1. dedup_running_at is set AND within the last 10 minutes (guards against server-restart leaks)
+  //  2. AND last_dedup_checked_at is NOT more recent than dedup_running_at
+  //     (if last_dedup_checked_at > dedup_running_at the job already completed)
   const dedupStillRunning = dedupRunningAt
-    ? Date.now() - new Date(dedupRunningAt).getTime() < 5 * 60 * 1000
+    ? Date.now() - new Date(dedupRunningAt).getTime() < 10 * 60 * 1000
+      && !(dedupLastRun && new Date(dedupLastRun) > new Date(dedupRunningAt))
     : false;
 
   return NextResponse.json({
