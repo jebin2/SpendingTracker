@@ -3,26 +3,7 @@ import { loadCronSession } from "./cronStore";
 import { runEmailImportJob } from "@/server/jobs/emailImportJob";
 import { runDuplicateDetection } from "@/server/services/duplicateDetectionService";
 import { log } from "@/lib/logger";
-
-async function refreshGoogleAccessToken(refreshToken: string): Promise<string | null> {
-  try {
-    const res = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id:     process.env.GOOGLE_CLIENT_ID!,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-        grant_type:    "refresh_token",
-        refresh_token: refreshToken,
-      }),
-    });
-    if (!res.ok) return null;
-    const data = await res.json() as { access_token?: string };
-    return data.access_token ?? null;
-  } catch {
-    return null;
-  }
-}
+import { refreshGoogleToken } from "@/lib/googleAuth";
 
 export async function runDailyJobs(): Promise<{ email: string; dedup: string }> {
   const stored = loadCronSession();
@@ -31,7 +12,7 @@ export async function runDailyJobs(): Promise<{ email: string; dedup: string }> 
     return { email: "skipped (not registered)", dedup: "skipped (not registered)" };
   }
 
-  const accessToken = await refreshGoogleAccessToken(stored.refreshToken);
+  const accessToken = await refreshGoogleToken(stored.refreshToken);
   if (!accessToken) {
     log.error("cron", "failed to refresh Google access token");
     return { email: "failed (auth)", dedup: "failed (auth)" };

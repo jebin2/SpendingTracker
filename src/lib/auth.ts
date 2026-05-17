@@ -4,27 +4,17 @@ import type { NextAuthConfig } from "next-auth";
 import type { JWT } from "next-auth/jwt";
 import { initSpendingSheet } from "@/lib/sheets";
 import { log } from "@/lib/logger";
+import { refreshGoogleToken } from "@/lib/googleAuth";
 
 async function refreshAccessToken(token: JWT): Promise<JWT> {
   try {
-    const res = await fetch("https://oauth2.googleapis.com/token", {
-      method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
-      body: new URLSearchParams({
-        client_id: process.env.GOOGLE_CLIENT_ID!,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-        grant_type: "refresh_token",
-        refresh_token: token.refresh_token!,
-      }),
-    });
-    const data = await res.json();
-    if (!res.ok) throw data;
+    const accessToken = await refreshGoogleToken(token.refresh_token!);
+    if (!accessToken) throw new Error("token refresh returned null");
+    // Google doesn't always return a new refresh_token; keep the old one if absent
     return {
       ...token,
-      access_token: data.access_token,
-      expires_at: Math.floor(Date.now() / 1000) + data.expires_in,
-      // Keep old refresh_token if no new one is returned
-      refresh_token: data.refresh_token ?? token.refresh_token,
+      access_token: accessToken,
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
       error: undefined,
     };
   } catch (e) {

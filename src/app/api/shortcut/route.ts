@@ -4,25 +4,9 @@ import { appendTransaction, setMetaValue } from "@/lib/sheets";
 import { parseTransactionText } from "@/lib/ai/parse-text";
 import type { Transaction } from "@/types";
 import { todayISO } from "@/lib/date/iso";
+import { refreshGoogleToken } from "@/lib/googleAuth";
 
 const SECRET = new TextEncoder().encode(process.env.JWT_SECRET ?? "change-me");
-
-async function refreshAccessToken(refreshToken: string): Promise<string> {
-  const res = await fetch("https://oauth2.googleapis.com/token", {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: new URLSearchParams({
-      client_id:     process.env.GOOGLE_CLIENT_ID!,
-      client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-      grant_type:    "refresh_token",
-      refresh_token: refreshToken,
-    }),
-  });
-  if (!res.ok) throw new Error("token_refresh_failed");
-  const data = await res.json() as { access_token?: string };
-  if (!data.access_token) throw new Error("token_refresh_failed");
-  return data.access_token;
-}
 
 export async function POST(req: NextRequest) {
   const auth = req.headers.get("authorization");
@@ -48,10 +32,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Token is outdated — please reinstall the shortcut from the app." }, { status: 401 });
   }
 
-  let accessToken: string;
-  try {
-    accessToken = await refreshAccessToken(payload.refreshToken);
-  } catch {
+  const accessToken = await refreshGoogleToken(payload.refreshToken);
+  if (!accessToken) {
     return NextResponse.json({ error: "Could not authenticate — please reinstall the shortcut from the app." }, { status: 401 });
   }
 
