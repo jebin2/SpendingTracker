@@ -36,7 +36,7 @@ export default function ScheduledSettingsPage() {
   const router = useRouter();
   const [status,     setStatus]     = useState<CronStatus | null>(null);
   const [loading,    setLoading]    = useState(true);
-  const [triggering, setTriggering] = useState<"all" | "email" | "dedup" | null>(null);
+  const [triggering, setTriggering] = useState<"all" | "email" | "dedup" | "analysis" | null>(null);
   const [lastMsg,    setLastMsg]    = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -90,7 +90,7 @@ export default function ScheduledSettingsPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function trigger(job: "all" | "email" | "dedup") {
+  async function trigger(job: "all" | "email" | "dedup" | "analysis") {
     if (triggering || isAnyRunning) return;
     setTriggering(job);
     setLastMsg(null);
