@@ -29,7 +29,9 @@ export const POST = withSession("POST parse/text/async", async (session, req: Ne
   };
 
   await appendTransaction(session.accessToken, session.sheetId, placeholder);
-  runTextParseJob(session, placeholder.id, region).catch(() => {});
+  runTextParseJob(session, placeholder.id, region).catch((err) => {
+    console.error("[text-parse] background job failed:", placeholder.id, err);
+  });
 
   return NextResponse.json({ ok: true, txId: placeholder.id });
 });

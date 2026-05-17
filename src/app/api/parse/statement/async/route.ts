@@ -48,7 +48,9 @@ export const POST = withSession("POST parse/statement/async", async (session, re
   };
 
   await appendTransaction(session.accessToken, session.sheetId, placeholder);
-  runStatementParseJob(session, placeholder.id).catch(() => {});
+  runStatementParseJob(session, placeholder.id).catch((err) => {
+    console.error("[statement-parse] background job failed:", placeholder.id, err);
+  });
 
   return NextResponse.json({ ok: true, txId: placeholder.id });
 });

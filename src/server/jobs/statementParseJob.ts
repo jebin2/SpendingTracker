@@ -42,9 +42,9 @@ export async function runStatementParseJob(
   placeholderId: string
 ): Promise<void> {
   log.info("statement-parse", "started", { placeholderId });
-  await updateTransactionField(session.accessToken, session.sheetId, placeholderId, { status: "processing" });
 
   try {
+    await updateTransactionField(session.accessToken, session.sheetId, placeholderId, { status: "processing" });
     const placeholder = await getTransactionById(session.accessToken, session.sheetId, placeholderId);
     if (!placeholder?.receipt_url) {
       await updateTransactionField(session.accessToken, session.sheetId, placeholderId, { status: "failed" });

@@ -36,7 +36,9 @@ export const POST = withSession("POST duplicates/merge", async (session, req: Ne
   await appendTransaction(session.accessToken, session.sheetId, placeholder);
 
   // Fire-and-forget — responds immediately, job runs in background
-  runMergeJob(session, placeholder.id).catch(() => {});
+  runMergeJob(session, placeholder.id).catch((err) => {
+    console.error("[merge] background job failed:", placeholder.id, err);
+  });
 
   return NextResponse.json({ ok: true, placeholderId: placeholder.id });
 });

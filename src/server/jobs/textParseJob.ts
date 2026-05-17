@@ -11,9 +11,8 @@ export async function runTextParseJob(
 ): Promise<void> {
   log.info("text-parse", "started", { txId });
 
-  await updateTransactionField(session.accessToken, session.sheetId, txId, { status: "processing" });
-
   try {
+    await updateTransactionField(session.accessToken, session.sheetId, txId, { status: "processing" });
     const placeholder = await getTransactionById(session.accessToken, session.sheetId, txId);
     if (!placeholder?.raw_input) {
       await updateTransactionField(session.accessToken, session.sheetId, txId, { status: "failed" });

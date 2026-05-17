@@ -24,9 +24,15 @@ export async function runMergeJob(
 ): Promise<void> {
   log.info("merge", `started`, { placeholderId });
 
-  await updateTransactionField(session.accessToken, session.sheetId, placeholderId, {
-    status: "merging",
-  });
+  try {
+    await updateTransactionField(session.accessToken, session.sheetId, placeholderId, {
+      status: "merging",
+    });
+  } catch (err) {
+    log.error("merge", "failed to set merging status", { placeholderId, err });
+    await updateTransactionField(session.accessToken, session.sheetId, placeholderId, { status: "merge_failed" }).catch(() => {});
+    return;
+  }
 
   const placeholder = await getTransactionById(session.accessToken, session.sheetId, placeholderId);
   if (!placeholder) {
