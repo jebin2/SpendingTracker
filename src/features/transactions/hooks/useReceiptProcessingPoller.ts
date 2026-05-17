@@ -25,14 +25,18 @@ export function useReceiptProcessingPoller(
   );
 
   useEffect(() => {
-    const hasInFlight = transactions.some((t) => t.status === "queued" || t.status === "processing");
+    const hasInFlight = transactions.some(
+      (t) => t.status === "queued" || t.status === "processing" || t.status === "merging"
+    );
     const shouldPoll = hasInFlight && isOnline;
 
     if (shouldPoll && !pollRef.current) {
       pollRef.current = setInterval(async () => {
         const txs = await loadData();
         triggerProcessing(txs);
-        const stillInFlight = txs.some((t) => t.status === "queued" || t.status === "processing");
+        const stillInFlight = txs.some(
+          (t) => t.status === "queued" || t.status === "processing" || t.status === "merging"
+        );
         if (!stillInFlight && pollRef.current) {
           clearInterval(pollRef.current);
           pollRef.current = null;

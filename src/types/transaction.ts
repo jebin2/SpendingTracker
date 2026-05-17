@@ -1,6 +1,6 @@
-export type TransactionStatus = "queued" | "processing" | "done" | "failed";
+export type TransactionStatus = "queued" | "processing" | "done" | "failed" | "merging" | "merge_failed";
 export type PaymentMethod = "Cash" | "UPI" | "Card" | "NetBanking" | "Other";
-export type TransactionSource = "manual" | "sms" | "email" | "receipt" | "shortcut";
+export type TransactionSource = "manual" | "sms" | "email" | "receipt" | "shortcut" | "merge";
 export type RecurrencePeriod = "daily" | "weekly" | "monthly" | "yearly";
 
 export interface Transaction {

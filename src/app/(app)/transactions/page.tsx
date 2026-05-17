@@ -63,7 +63,6 @@ function TransactionsContent() {
   const filtered = filterAndSortTransactions(transactions, { search, category: filterCat, showDuplicatesOnly: showDupsOnly, datePreset, customFrom, customTo });
   const groups = groupTransactionsByDate(filtered);
   const sortedDates = Object.keys(groups).sort((a, b) => b.localeCompare(a));
-  const inFlightCount = transactions.filter((t) => t.status === "queued" || t.status === "processing").length;
 
   return (
     <div className="max-w-2xl mx-auto px-5 pt-6 flex flex-col gap-4 overflow-hidden"
@@ -79,7 +78,7 @@ function TransactionsContent() {
       </div>
 
       <div className="flex-shrink-0">
-        <InFlightReceiptBanner count={inFlightCount} />
+        <InFlightReceiptBanner transactions={transactions} />
       </div>
 
       <div className="flex-shrink-0">

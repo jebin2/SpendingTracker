@@ -15,9 +15,11 @@ export { formatINR };
 function StatusBadge({ status }: { status: TransactionStatus }) {
   if (status === "done" || !status) return null;
   const map: Record<string, { label: string; icon: string; bg: string; color: string }> = {
-    queued: { label: "Queued", icon: "schedule", bg: "#fff3e0", color: "#e65100" },
-    processing: { label: "AI reading…", icon: "auto_awesome", bg: "var(--color-primary-fixed)", color: "var(--color-primary)" },
-    failed: { label: "Parse failed", icon: "error", bg: "var(--color-error-container)", color: "var(--color-error)" },
+    queued:       { label: "Queued",       icon: "schedule",     bg: "#fff3e0",                        color: "#e65100" },
+    processing:   { label: "AI reading…",  icon: "auto_awesome", bg: "var(--color-primary-fixed)",      color: "var(--color-primary)" },
+    failed:       { label: "Parse failed", icon: "error",        bg: "var(--color-error-container)",    color: "var(--color-error)" },
+    merging:      { label: "Merging…",     icon: "merge",        bg: "var(--color-primary-fixed)",      color: "var(--color-primary)" },
+    merge_failed: { label: "Merge failed", icon: "error",        bg: "var(--color-error-container)",    color: "var(--color-error)" },
   };
   const s = map[status];
   if (!s) return null;
@@ -39,10 +41,14 @@ interface TransactionRowProps {
 }
 
 export function TransactionRow({ tx, hasSuggestions, onSuggestionsClick, onClick }: TransactionRowProps) {
-  const isInFlight = tx.status === "queued" || tx.status === "processing";
-  const isFailed = tx.status === "failed";
+  const isInFlight = tx.status === "queued" || tx.status === "processing" || tx.status === "merging";
+  const isFailed   = tx.status === "failed" || tx.status === "merge_failed";
 
-  const primaryLabel = isInFlight
+  const primaryLabel = tx.status === "merging"
+    ? "AI merging duplicates…"
+    : tx.status === "merge_failed"
+    ? "Merge failed — tap to retry"
+    : isInFlight
     ? "Reading receipt…"
     : isFailed
     ? "Receipt — parse failed"

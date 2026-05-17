@@ -2,6 +2,7 @@ import cron from "node-cron";
 import { loadCronSession } from "./cronStore";
 import { runEmailImportJob } from "@/server/jobs/emailImportJob";
 import { runDuplicateDetection } from "@/server/services/duplicateDetectionService";
+import { retryFailedMerges } from "@/server/jobs/mergeJob";
 import { log } from "@/lib/logger";
 import { refreshGoogleToken } from "@/lib/googleAuth";
 
@@ -45,6 +46,13 @@ export async function runDailyJobs(): Promise<{ email: string; dedup: string }> 
   } catch (err) {
     log.error("cron", "duplicate detection failed", err);
     dedupResult = "failed";
+  }
+
+  // ── 3. Retry any failed merges ────────────────────────────────────────────
+  try {
+    await retryFailedMerges(session);
+  } catch (err) {
+    log.error("cron", "merge retry pass failed", err);
   }
 
   return { email: emailResult, dedup: dedupResult };

@@ -12,20 +12,26 @@ import { useNetworkStore } from "@/store/networkStore";
 import { useTransactions } from "@/hooks/useTransactions";
 import { transactionsApi, transactionUrl } from "@/lib/api/transactions";
 import { receiptsApi } from "@/lib/api/receipts";
+import { duplicatesApi } from "@/lib/api/duplicates";
 
 // ── InFlight placeholder ──────────────────────────────────────────────────────
 
 function InFlightView({ status }: { status: string }) {
+  const isMerging = status === "merging";
   return (
     <div className="flex flex-col items-center justify-center py-16 gap-4 px-5 text-center">
       <div className="w-16 h-16 rounded-full flex items-center justify-center" style={{ background: "var(--color-primary-fixed)" }}>
-        <span className="material-symbols-outlined animate-spin" style={{ fontSize: 32, color: "var(--color-primary)" }}>progress_activity</span>
+        <span className="material-symbols-outlined animate-spin" style={{ fontSize: 32, color: "var(--color-primary)" }}>
+          {isMerging ? "merge" : "progress_activity"}
+        </span>
       </div>
       <p style={{ fontSize: 18, fontWeight: 600, color: "var(--color-on-surface)" }}>
-        {status === "queued" ? "Waiting to process…" : "Reading your receipt…"}
+        {isMerging ? "Merging duplicates…" : status === "queued" ? "Waiting to process…" : "Reading your receipt…"}
       </p>
       <p style={{ fontSize: 14, color: "var(--color-on-surface-variant)", maxWidth: 280 }}>
-        AI is extracting details from your receipt. Usually under a minute.
+        {isMerging
+          ? "AI is combining the best data from each duplicate entry."
+          : "AI is extracting details from your receipt. Usually under a minute."}
       </p>
     </div>
   );
@@ -46,7 +52,9 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
 
   const liveTx = useTransactionsStore((s) => s.transactions.find((t) => t.id === initialTx.id)) ?? initialTx;
   const [tx, setTx] = useState<Transaction>(liveTx);
-  const [view, setView] = useState<"detail" | "edit">(liveTx.status === "failed" ? "edit" : "detail");
+  const [view, setView] = useState<"detail" | "edit">(
+    (liveTx.status === "failed" || liveTx.status === "merge_failed") ? "edit" : "detail"
+  );
   const [showReceiptItems, setShowReceiptItems] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [retrying, setRetrying] = useState(false);
@@ -62,7 +70,7 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
 
   // Poll API while in-flight and online
   useEffect(() => {
-    if (!["queued", "processing"].includes(tx.status ?? "") || !isOnline) return;
+    if (!["queued", "processing", "merging"].includes(tx.status ?? "") || !isOnline) return;
     const timer = setInterval(() => refresh(), 5000);
     return () => clearInterval(timer);
   }, [tx.status, isOnline, refresh]);
@@ -108,8 +116,28 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
     }
   }
 
-  const isInFlight = tx.status === "queued" || tx.status === "processing";
-  const isFailed = tx.status === "failed";
+  async function retryMerge() {
+    if (retrying) return;
+    setError(null);
+    setRetrying(true);
+    try {
+      // Re-enqueue the same merge job using the stored source IDs
+      const res = await duplicatesApi.merge(
+        (tx.notes?.match(/merge_source:([^\s|]+)/)?.[1] ?? "").split(",").filter(Boolean)
+      );
+      if (!res.ok) throw new Error("Retry failed — please try again.");
+      setTx((prev) => ({ ...prev, status: "merging" }));
+      setView("detail");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Retry failed.");
+    } finally {
+      setRetrying(false);
+    }
+  }
+
+  const isInFlight  = tx.status === "queued" || tx.status === "processing" || tx.status === "merging";
+  const isFailed    = tx.status === "failed" || tx.status === "merge_failed";
+  const isMergeFail = tx.status === "merge_failed";
   const heroColor = isInFlight ? "var(--color-secondary)" : isFailed ? "var(--color-error)" : "var(--color-primary)";
 
   // ── Hero action buttons (right side) ──────────────────────────────────────
@@ -193,10 +221,15 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
             </div>
             <div className="flex-1 min-w-0">
               <p className="truncate" style={{ fontSize: 20, fontWeight: 700, color: "#fff" }}>
-                {isInFlight ? (tx.status === "queued" ? "In queue…" : "Processing…") : (tx.item_name || tx.merchant)}
+                {isInFlight
+                  ? (tx.status === "merging" ? "Merging…" : tx.status === "queued" ? "In queue…" : "Processing…")
+                  : (tx.item_name || tx.merchant)}
               </p>
               <p style={{ fontSize: 13, color: "rgba(255,255,255,0.7)" }}>
-                {isInFlight ? "AI reading receipt" : isFailed ? "AI could not read receipt"
+                {isInFlight
+                  ? (tx.status === "merging" ? "AI merging duplicates" : "AI reading receipt")
+                  : isFailed
+                  ? (isMergeFail ? "Merge failed" : "AI could not read receipt")
                   : tx.item_name ? `${tx.merchant} · ${tx.category}` : tx.category}
               </p>
             </div>
@@ -220,14 +253,20 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
                     style={{ background: "var(--color-error-container)" }}>
                     <span className="material-symbols-outlined" style={{ color: "var(--color-error)", fontSize: 18 }}>error</span>
                     <p style={{ fontSize: 13, color: "var(--color-on-error-container)" }}>
-                      AI couldn&apos;t read this receipt. Fill in details below or retry.
+                      {isMergeFail
+                        ? "AI couldn’t merge these duplicates. Tap retry or resolve manually."
+                        : "AI couldn’t read this receipt. Fill in details below or retry."}
                     </p>
                   </div>
-                  <button onClick={retryAI} disabled={retrying}
+                  <button
+                    onClick={isMergeFail ? retryMerge : retryAI}
+                    disabled={retrying}
                     className="self-start flex items-center gap-2 px-4 py-2.5 rounded-xl font-medium"
                     style={{ background: "var(--color-secondary-container)", color: "var(--color-on-secondary-container)", opacity: retrying ? 0.6 : 1, cursor: "pointer" }}>
-                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>auto_fix_high</span>
-                    {retrying ? "Retrying…" : "Retry AI"}
+                    <span className="material-symbols-outlined" style={{ fontSize: 18 }}>
+                      {isMergeFail ? "merge" : "auto_fix_high"}
+                    </span>
+                    {retrying ? "Retrying…" : isMergeFail ? "Retry Merge" : "Retry AI"}
                   </button>
                 </div>
               )}

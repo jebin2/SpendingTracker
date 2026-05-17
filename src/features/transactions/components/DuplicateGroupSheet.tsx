@@ -1,7 +1,9 @@
+import { useState } from "react";
 import { formatINR } from "@/lib/format/currency";
 import type { DuplicateGroup } from "@/features/transactions/utils/list";
 import type { Transaction } from "@/types";
 import { BottomSheet, BottomSheetHeader } from "@/components/ui/BottomSheet";
+import { duplicatesApi } from "@/lib/api/duplicates";
 
 interface DuplicateGroupSheetProps {
   group: DuplicateGroup;
@@ -12,6 +14,24 @@ interface DuplicateGroupSheetProps {
 }
 
 export function DuplicateGroupSheet({ group, onRemove, onDismissAll, onClose, onViewTransaction }: DuplicateGroupSheetProps) {
+  const [merging, setMerging] = useState(false);
+  const [mergeError, setMergeError] = useState<string | null>(null);
+
+  async function handleMerge() {
+    if (merging) return;
+    setMerging(true);
+    setMergeError(null);
+    try {
+      const allIds = [group.original.id, ...group.duplicates.map((d) => d.id)];
+      const res = await duplicatesApi.merge(allIds);
+      if (!res.ok) throw new Error("Merge failed — please try again.");
+      onClose();
+    } catch (err) {
+      setMergeError(err instanceof Error ? err.message : "Merge failed.");
+      setMerging(false);
+    }
+  }
+
   return (
     <BottomSheet onClose={onClose}>
       <BottomSheetHeader
@@ -53,14 +73,44 @@ export function DuplicateGroupSheet({ group, onRemove, onDismissAll, onClose, on
           </button>
         ))}
       </div>
-      <div className="px-4 pb-6 flex-shrink-0">
-        <button
-          onClick={onDismissAll}
-          className="w-full py-3 rounded-2xl font-semibold"
-          style={{ background: "var(--color-surface-container)", color: "var(--color-on-surface-variant)", fontSize: 15, cursor: "pointer" }}
-        >
-          Keep all (not duplicates)
-        </button>
+      <div className="px-4 pb-6 flex-shrink-0 flex flex-col gap-2">
+        {mergeError && (
+          <p className="text-center text-sm px-2" style={{ color: "var(--color-error)" }}>{mergeError}</p>
+        )}
+        <div className="flex gap-2">
+          <button
+            onClick={handleMerge}
+            disabled={merging}
+            className="flex-1 py-3 rounded-2xl font-semibold flex items-center justify-center gap-2"
+            style={{
+              background: "var(--color-primary)",
+              color: "#fff",
+              fontSize: 15,
+              opacity: merging ? 0.6 : 1,
+              cursor: merging ? "not-allowed" : "pointer",
+            }}
+          >
+            {merging
+              ? <div className="w-4 h-4 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "rgba(255,255,255,0.4)", borderTopColor: "#fff" }} />
+              : <span className="material-symbols-outlined" style={{ fontSize: 18 }}>merge</span>
+            }
+            {merging ? "Starting…" : "Merge into one"}
+          </button>
+          <button
+            onClick={onDismissAll}
+            disabled={merging}
+            className="flex-1 py-3 rounded-2xl font-semibold"
+            style={{
+              background: "var(--color-surface-container)",
+              color: "var(--color-on-surface-variant)",
+              fontSize: 15,
+              opacity: merging ? 0.4 : 1,
+              cursor: merging ? "not-allowed" : "pointer",
+            }}
+          >
+            Keep all
+          </button>
+        </div>
       </div>
     </BottomSheet>
   );
