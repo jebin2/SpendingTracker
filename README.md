@@ -1,36 +1,30 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# FundsFlee
 
-## Getting Started
+A personal AI spending tracker that logs transactions automatically from receipts, bank SMS, emails, and bank statements — all stored in your own Google Sheet.
 
-First, run the development server:
+## What it does
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- **Capture** — photograph a receipt, paste a bank SMS, or upload a PDF bank statement. AI reads it and creates the transaction in the background.
+- **Email import** — connects to Gmail and automatically pulls transactions from bank alert emails daily.
+- **Analysis** — AI-generated spending breakdown by category with insights and saving tips.
+- **Duplicates** — detects and merges transactions recorded from multiple sources (e.g. the same payment from a receipt and a bank email).
+- **Offline-first** — works without internet; changes sync automatically when connectivity returns.
+- **PWA** — installable on iPhone and Android, works like a native app.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Tech stack
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **Next.js 16** — full-stack React framework
+- **Google Sheets** — the database; every user's data lives in their own sheet in their Google Drive
+- **Google OAuth** — sign-in and access to Sheets, Drive, and Gmail
+- **Claude AI** — receipt parsing, SMS parsing, PDF extraction, duplicate detection, spending analysis
+- **Serwist** — service worker for PWA and offline support
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Self-hosting
 
-## Learn More
+1. Clone the repo
+2. Copy `.env.local.example` → `.env.local` and fill in your keys (Google OAuth, Claude API)
+3. Run `bash deploy.sh` on your VPS — sets up PM2, builds, and configures Cloudflare Tunnel
 
-To learn more about Next.js, take a look at the following resources:
+## Feature docs
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Plain-language descriptions of every feature are in [`/functionality`](./functionality/).
