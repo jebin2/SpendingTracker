@@ -27,11 +27,9 @@ export default function ShortcutSettingsPage() {
 
   function installShortcut() {
     if (!token) return;
-    const fileUrl = `${window.location.origin}/api/shortcut/file?token=${encodeURIComponent(token)}`;
-    // Open the file URL directly in Safari — iOS recognises .shortcut files
-    // and prompts "Open in Shortcuts" automatically. The shortcuts:// URL scheme
-    // is unreliable from a PWA and shows "URL invalid" errors on some iOS versions.
-    window.open(fileUrl, "_blank");
+    const fileUrl    = `${window.location.origin}/api/shortcut/file?token=${encodeURIComponent(token)}`;
+    const installUrl = `shortcuts://import-shortcut?url=${encodeURIComponent(fileUrl)}&name=${encodeURIComponent("Log to FundsFlee")}`;
+    window.location.href = installUrl;
   }
 
   const masked = token ? `${token.slice(0, 8)}••••••••••••${token.slice(-4)}` : "Loading…";
@@ -75,6 +73,17 @@ export default function ShortcutSettingsPage() {
           </p>
         </div>
 
+        {/* Prerequisite */}
+        <div className="rounded-2xl p-4 flex gap-3" style={{ background: "#fff8e1", border: "1px solid #ffe082" }}>
+          <span className="material-symbols-outlined flex-shrink-0" style={{ color: "#f9a825", fontSize: 20, marginTop: 1 }}>warning</span>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 600, color: "#6d4c00" }}>One-time setup required</p>
+            <p style={{ fontSize: 12, color: "#795500", marginTop: 2 }}>
+              Go to <strong>Settings → Shortcuts → Allow Untrusted Shortcuts</strong> and turn it on. Without this, iOS blocks installing shortcuts from external sources.
+            </p>
+          </div>
+        </div>
+
         {/* One-tap install */}
         <div className="flex flex-col gap-3">
           <button
@@ -94,7 +103,7 @@ export default function ShortcutSettingsPage() {
             {token ? "Install Shortcut" : "Loading…"}
           </button>
           <p style={{ fontSize: 12, color: "var(--color-on-surface-variant)", textAlign: "center" }}>
-            Downloads the shortcut file — tap &quot;Open in Shortcuts&quot; when Safari prompts you, then tap &quot;Add Shortcut&quot;.
+            Opens the Shortcuts app to install automatically. Your token is pre-configured — just tap <strong>Add Shortcut</strong>.
           </p>
         </div>
 
