@@ -86,14 +86,11 @@ export const TransactionFilters = memo(function TransactionFilters({
       <div className="flex gap-2 overflow-x-auto pb-1">
         <button
           onClick={onDupsToggle}
-          disabled={dupChecking}
           className="flex-shrink-0 px-4 py-2 rounded-full text-sm font-medium flex items-center gap-1.5"
           style={{
             background: showDupsOnly ? "#fff3e0" : "var(--color-surface-container)",
             color: showDupsOnly ? "#e65100" : "var(--color-on-surface-variant)",
             border: showDupsOnly ? "1px solid #ffe0b2" : "none",
-            opacity: dupChecking ? 0.6 : 1,
-            cursor: dupChecking ? "not-allowed" : "pointer",
           }}
         >
           {dupChecking ? (
