@@ -45,18 +45,21 @@ export interface TransactionPage {
   hasMore: boolean;
 }
 
-// Fetch just the ID column to count how many data rows exist.
-// Cheap: single-column range with no end limit.
+// Count non-deleted rows by reading the ID column and deleted column in one batchGet.
+// Returns the number of rows that have an ID and are not soft-deleted.
 async function getRowCount(
   sheets: ReturnType<typeof getSheetsClient>,
   sheetId: string
 ): Promise<number> {
-  const res = await sheets.spreadsheets.values.get({
+  const res = await sheets.spreadsheets.values.batchGet({
     spreadsheetId: sheetId,
-    range: "transactions!A2:A",
+    ranges: ["transactions!A2:A", `transactions!${COLS.deleted.letter}2:${COLS.deleted.letter}`],
     majorDimension: "COLUMNS",
   });
-  return res.data.values?.[0]?.filter(Boolean).length ?? 0;
+  const [idRange, deletedRange] = res.data.valueRanges ?? [];
+  const ids     = idRange?.values?.[0]     ?? [];
+  const deleted = deletedRange?.values?.[0] ?? [];
+  return ids.filter((id, i) => id && deleted[i] !== "TRUE").length;
 }
 
 export async function appendTransaction(
