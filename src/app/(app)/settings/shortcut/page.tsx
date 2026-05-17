@@ -33,16 +33,32 @@ export default function ShortcutSettingsPage() {
     setShowSetupModal(false);
     setInstalling(true);
     try {
-      const res = await fetch("/api/shortcut/prepare", { method: "POST" });
-      if (!res.ok) throw new Error("Failed to prepare install");
-      const { prepareId } = await res.json() as { prepareId: string };
+      // Step 1: get a short-lived prepare ID
+      const prepRes = await fetch("/api/shortcut/prepare", { method: "POST" });
+      if (!prepRes.ok) throw new Error("Failed to prepare");
+      const { prepareId } = await prepRes.json() as { prepareId: string };
+
+      // Step 2: fetch the file content as a blob (works from async code, no popup blocker)
       const fileUrl = `${window.location.origin}/api/shortcut/install.shortcut?id=${encodeURIComponent(prepareId)}`;
-      // Open in a new window — on iOS PWA this triggers an in-app Safari view
-      // which shows a download banner. The user then taps "Open in Shortcuts".
-      window.open(fileUrl, "_blank");
+      const fileRes = await fetch(fileUrl);
+      if (!fileRes.ok) throw new Error("Failed to download shortcut file");
+      const blob = await fileRes.blob();
+
+      // Step 3: create a blob URL and click a hidden <a download> link
+      // blob: URLs bypass iOS's same-origin silent-download behaviour
+      const blobUrl = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = blobUrl;
+      a.download = "FundsFlee.shortcut";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 2000);
+
       setShowDoneModal(true);
-    } catch {
-      alert("Could not prepare shortcut — please try again.");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
+      alert(`Could not download shortcut: ${msg}. Please try again.`);
     } finally {
       setInstalling(false);
     }
@@ -202,17 +218,27 @@ export default function ShortcutSettingsPage() {
             <div className="flex gap-2 px-1">
               <span className="material-symbols-outlined flex-shrink-0" style={{ color: "var(--color-outline)", fontSize: 16, marginTop: 1 }}>info</span>
               <p style={{ fontSize: 12, color: "var(--color-on-surface-variant)" }}>
-                No banner? Open the <strong>Files app → Downloads</strong>, tap <strong>FundsFlee.shortcut</strong>, then tap the share icon.
+                No prompt? The file was saved to <strong>Files → Downloads</strong>. Tap the button below to open it.
               </p>
             </div>
 
-            <button
-              onClick={() => setShowDoneModal(false)}
-              className="w-full py-3 rounded-2xl font-medium"
-              style={{ background: "var(--color-surface-container)", color: "var(--color-on-surface-variant)", fontSize: 15 }}
-            >
-              Got it
-            </button>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => { window.location.href = "shareddocuments://"; }}
+                className="w-full py-3.5 rounded-2xl font-semibold flex items-center justify-center gap-2"
+                style={{ background: "var(--color-primary)", color: "#fff", fontSize: 15 }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 20 }}>folder_open</span>
+                Open Files App
+              </button>
+              <button
+                onClick={() => setShowDoneModal(false)}
+                className="w-full py-3 rounded-2xl font-medium"
+                style={{ background: "var(--color-surface-container)", color: "var(--color-on-surface-variant)", fontSize: 15 }}
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}
