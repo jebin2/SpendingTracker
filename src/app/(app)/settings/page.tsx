@@ -13,6 +13,26 @@ export default function SettingsPage() {
   const push = usePushSubscription();
   const [confirmText, setConfirmText] = useState("");
   const [resetting, setResetting] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function refreshApp() {
+    if (!confirm("Clear all cached files and reload the latest version of the app?")) return;
+    setRefreshing(true);
+    try {
+      if ("caches" in window) {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+      }
+      if ("serviceWorker" in navigator) {
+        const regs = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(regs.map((reg) => reg.update()));
+      }
+      window.location.reload();
+    } catch {
+      setRefreshing(false);
+      alert("Refresh failed — please reload manually.");
+    }
+  }
 
   async function handleReset() {
     setResetting(true);
@@ -127,6 +147,23 @@ export default function SettingsPage() {
       <div>
         <p style={{ fontSize: 12, color: "var(--color-outline)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }} className="px-1 mb-2">Danger Zone</p>
         <div className="rounded-3xl overflow-hidden border" style={{ borderColor: "var(--color-outline-variant)", background: "var(--color-surface-container-lowest)" }}>
+          <button
+            onClick={refreshApp}
+            disabled={refreshing}
+            className="w-full flex items-center gap-4 px-5 py-4 text-left"
+            style={{ borderBottom: "1px solid var(--color-surface-variant)", opacity: refreshing ? 0.6 : 1 }}
+          >
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "var(--color-error-container)" }}>
+              {refreshing
+                ? <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "rgba(0,0,0,0.1)", borderTopColor: "var(--color-error)" }} />
+                : <span className="material-symbols-outlined" style={{ color: "var(--color-error)", fontSize: 20 }}>system_update</span>
+              }
+            </div>
+            <div className="flex-1">
+              <p style={{ fontSize: 15, fontWeight: 500, color: "var(--color-error)" }}>Refresh App</p>
+              <p style={{ fontSize: 13, color: "var(--color-on-surface-variant)" }}>Clear cached files and load the latest version</p>
+            </div>
+          </button>
           <button
             onClick={() => { setShowReset(true); setConfirmText(""); }}
             className="w-full flex items-center gap-4 px-5 py-4 text-left"
