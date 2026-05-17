@@ -72,15 +72,6 @@ export default function DataSettingsPage() {
 
   const items = [
     {
-      icon: "system_update",
-      label: "Refresh App",
-      sub: "Clear cached files and load the latest version",
-      action: refreshApp,
-      loading: refreshing,
-      color: "#0277bd",
-      bg: "#e1f5fe",
-    },
-    {
       icon: "download",
       label: "Export as CSV",
       sub: "Download all transactions as a spreadsheet",
@@ -140,6 +131,23 @@ export default function DataSettingsPage() {
 
         <p style={{ fontSize: 12, color: "var(--color-outline)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }} className="px-1">Danger Zone</p>
         <div className="rounded-3xl overflow-hidden border" style={{ borderColor: "var(--color-outline-variant)", background: "var(--color-surface-container-lowest)" }}>
+          <button
+            onClick={refreshApp}
+            disabled={refreshing}
+            className="w-full flex items-center gap-4 px-5 py-4 text-left"
+            style={{ borderBottom: "1px solid var(--color-surface-variant)", opacity: refreshing ? 0.6 : 1 }}
+          >
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: "var(--color-error-container)" }}>
+              {refreshing
+                ? <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "rgba(var(--color-error-rgb),0.3)", borderTopColor: "var(--color-error)" }} />
+                : <span className="material-symbols-outlined" style={{ color: "var(--color-error)", fontSize: 20 }}>system_update</span>
+              }
+            </div>
+            <div className="flex-1">
+              <p style={{ fontSize: 15, fontWeight: 500, color: "var(--color-error)" }}>Refresh App</p>
+              <p style={{ fontSize: 13, color: "var(--color-on-surface-variant)" }}>Clear cached files and load the latest version</p>
+            </div>
+          </button>
           <button
             onClick={clearLocalCache}
             disabled={clearing}
