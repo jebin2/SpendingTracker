@@ -5,9 +5,10 @@ import { useRouter } from "next/navigation";
 
 export default function ShortcutSettingsPage() {
   const router   = useRouter();
-  const [token,   setToken]   = useState("");
-  const [copied,  setCopied]  = useState(false);
+  const [token,     setToken]     = useState("");
+  const [copied,    setCopied]    = useState(false);
   const [showToken, setShowToken] = useState(false);
+  const [installing, setInstalling] = useState(false);
 
   useEffect(() => {
     fetch("/api/user/token").then((r) => r.json()).then((d) => setToken(d.token));
@@ -25,11 +26,21 @@ export default function ShortcutSettingsPage() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  function installShortcut() {
-    if (!token) return;
-    const fileUrl    = `${window.location.origin}/api/shortcut/file?token=${encodeURIComponent(token)}`;
-    const installUrl = `shortcuts://import-shortcut?url=${encodeURIComponent(fileUrl)}&name=${encodeURIComponent("Log to FundsFlee")}`;
-    window.location.href = installUrl;
+  async function installShortcut() {
+    if (!token || installing) return;
+    setInstalling(true);
+    try {
+      const res = await fetch("/api/shortcut/prepare", { method: "POST" });
+      if (!res.ok) throw new Error("Failed to prepare install");
+      const { prepareId } = await res.json() as { prepareId: string };
+      const fileUrl    = `${window.location.origin}/api/shortcut/file?id=${encodeURIComponent(prepareId)}`;
+      const installUrl = `shortcuts://import-shortcut?url=${encodeURIComponent(fileUrl)}&name=${encodeURIComponent("Log to FundsFlee")}`;
+      window.location.href = installUrl;
+    } catch {
+      alert("Could not prepare shortcut — please try again.");
+    } finally {
+      setInstalling(false);
+    }
   }
 
   const masked = token ? `${token.slice(0, 8)}••••••••••••${token.slice(-4)}` : "Loading…";
@@ -88,19 +99,20 @@ export default function ShortcutSettingsPage() {
         <div className="flex flex-col gap-3">
           <button
             onClick={installShortcut}
-            disabled={!token}
+            disabled={!token || installing}
             className="w-full py-4 rounded-2xl font-semibold flex items-center justify-center gap-3 transition-all"
             style={{
               background:  token ? "var(--color-primary)" : "var(--color-surface-container)",
               color:       token ? "#fff" : "var(--color-on-surface-variant)",
               fontSize:    16,
-              opacity:     token ? 1 : 0.6,
+              opacity:     (token && !installing) ? 1 : 0.6,
             }}
           >
-            <span className="material-symbols-outlined" style={{ fontSize: 22, fontVariationSettings: "'FILL' 1" }}>
-              shortcut
-            </span>
-            {token ? "Install Shortcut" : "Loading…"}
+            {installing
+              ? <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "rgba(255,255,255,0.4)", borderTopColor: "#fff" }} />
+              : <span className="material-symbols-outlined" style={{ fontSize: 22, fontVariationSettings: "'FILL' 1" }}>shortcut</span>
+            }
+            {!token ? "Loading…" : installing ? "Preparing…" : "Install Shortcut"}
           </button>
           <p style={{ fontSize: 12, color: "var(--color-on-surface-variant)", textAlign: "center" }}>
             Opens the Shortcuts app to install automatically. Your token is pre-configured — just tap <strong>Add Shortcut</strong>.

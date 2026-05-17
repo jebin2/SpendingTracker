@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { jwtVerify } from "jose";
 import { buildBplist } from "@/lib/bplist";
-
-const SECRET = new TextEncoder().encode(process.env.JWT_SECRET ?? "change-me");
+import { getShortcutPrepare } from "@/lib/shortcutPrepare";
+import { log } from "@/lib/logger";
 
 // Builds the Shortcuts plist structure for a "Log to FundsFlee" share extension shortcut.
 // The shortcut receives shared text, POSTs it to /api/shortcut with the user's token,
@@ -74,24 +73,26 @@ function buildShortcutPlist(token: string, origin: string) {
   };
 }
 
-// GET /api/shortcut/file?token=<jwt>
-// Validates the JWT (same one used by /api/shortcut) and returns a binary .shortcut
-// file with the token already embedded — no manual paste step required.
-// The token is passed as a query param because the Shortcuts app downloads this URL
-// without any session cookie.
+// GET /api/shortcut/file?id=<prepareId>
+// Looks up the shortcut JWT by the short prepare ID (stored in memory by
+// POST /api/shortcut/prepare) and returns a binary .shortcut file with the
+// token already embedded. Using a UUID instead of the full JWT keeps the
+// URL short enough for the shortcuts:// URL scheme to handle.
 export async function GET(req: NextRequest) {
-  const token = req.nextUrl.searchParams.get("token");
+  const prepareId = req.nextUrl.searchParams.get("id");
+  log.info("shortcut", `file download request`, { prepareId: prepareId?.slice(0, 8) ?? "none" });
+
+  if (!prepareId) {
+    return NextResponse.json({ error: "id required" }, { status: 400 });
+  }
+
+  const token = getShortcutPrepare(prepareId);
   if (!token) {
-    return NextResponse.json({ error: "token required" }, { status: 400 });
+    log.warn("shortcut", `prepare id not found or expired`, { prepareId: prepareId.slice(0, 8) });
+    return NextResponse.json({ error: "Invalid or expired install link — tap Install Shortcut again." }, { status: 401 });
   }
 
-  try {
-    const { payload } = await jwtVerify(token, SECRET);
-    if (!payload.email || !payload.sheetId) throw new Error("invalid payload");
-  } catch {
-    return NextResponse.json({ error: "invalid token" }, { status: 401 });
-  }
-
+  log.info("shortcut", `building shortcut file`);
   const origin = `${req.nextUrl.protocol}//${req.nextUrl.host}`;
   const plist  = buildShortcutPlist(token, origin);
   const buf    = buildBplist(plist);
