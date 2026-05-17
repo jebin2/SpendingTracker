@@ -180,6 +180,7 @@ function TransactionsContent() {
           onRemove={(tx) => resolveDuplicate(tx, "remove")}
           onDismissAll={() => dismissGroup(activeDupGroup)}
           onClose={() => setActiveDupGroup(null)}
+          onViewTransaction={setSelectedTx}
         />
       )}
     </div>
