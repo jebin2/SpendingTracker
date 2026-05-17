@@ -46,3 +46,11 @@ When a job is running, its row shows a spinner and the Run button is disabled â€
 A green dot means the app is registered and daily jobs will run. An orange dot means you need to open the app once to register.
 
 Each row shows when that job last ran (e.g. "3 hours ago"). The Analysis row shows the most recent run time across all three periods.
+
+---
+
+## Stuck job warnings
+
+If the server restarts while a job is running, the job's "running" flag can be left behind even though nothing is actually running. When this happens, a yellow warning banner appears at the top of the Scheduled Tasks page for the affected job (Email Import or Duplicate Detection). Tap **Clear** on the banner to reset the flag and re-enable the Run button.
+
+The daily schedule also automatically cleans up any transactions left stuck in a processing or merging state for more than 30 minutes â€” marking them as failed so you can see what went wrong and retry if needed.

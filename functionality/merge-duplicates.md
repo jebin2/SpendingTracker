@@ -20,6 +20,8 @@ In the Transactions list, tap the **Duplicates** chip to see grouped duplicates.
 
 4. If merging fails, an error indicator appears on the placeholder. The app tries again up to three times automatically, and also retries once per day overnight.
 
+5. If the server restarts mid-merge, the "Merging…" placeholder is automatically cleaned up during the next daily run (within 30 minutes of the scheduled job). It will be marked as failed so you know to retry it.
+
 ---
 
 ## What it looks like
