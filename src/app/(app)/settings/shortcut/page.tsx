@@ -35,9 +35,11 @@ export default function ShortcutSettingsPage() {
       const res = await fetch("/api/shortcut/prepare", { method: "POST" });
       if (!res.ok) throw new Error("Failed to prepare install");
       const { prepareId } = await res.json() as { prepareId: string };
-      const fileUrl    = `${window.location.origin}/api/shortcut/install.shortcut?id=${encodeURIComponent(prepareId)}`;
-      const installUrl = `shortcuts://import-shortcut?url=${encodeURIComponent(fileUrl)}&name=${encodeURIComponent("Log to FundsFlee")}`;
-      window.location.href = installUrl;
+      const fileUrl = `${window.location.origin}/api/shortcut/install.shortcut?id=${encodeURIComponent(prepareId)}`;
+      // Navigate directly to the file URL — iOS handles .shortcut downloads natively
+      // and shows a share sheet with "Open in Shortcuts". The shortcuts:// URL scheme
+      // is blocked by Apple for self-hosted servers on iOS 13.1+.
+      window.location.href = fileUrl;
     } catch {
       alert("Could not prepare shortcut — please try again.");
     } finally {
@@ -48,9 +50,9 @@ export default function ShortcutSettingsPage() {
   const masked = token ? `${token.slice(0, 8)}••••••••••••${token.slice(-4)}` : "Loading…";
 
   const steps = [
-    { icon: "shortcut", text: "Make sure the Shortcuts app is installed and open it once" },
-    { icon: "check_circle", text: "Run any built-in shortcut at least once (e.g. ‘Create Reminder’)" },
-    { icon: "download", text: "Come back here and tap ‘Install Now’ below" },
+    { icon: "download", text: "Tap ‘Download & Install’ — your iPhone will download the shortcut file" },
+    { icon: "ios_share", text: "A share sheet appears — tap ‘Open in Shortcuts’" },
+    { icon: "add_circle", text: "The Shortcuts app opens — tap ‘Add Shortcut’ to finish" },
   ];
 
   return (
@@ -109,10 +111,10 @@ export default function ShortcutSettingsPage() {
               ? <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "rgba(255,255,255,0.4)", borderTopColor: "#fff" }} />
               : <span className="material-symbols-outlined" style={{ fontSize: 22, fontVariationSettings: "'FILL' 1" }}>shortcut</span>
             }
-            {!token ? "Loading…" : installing ? "Installing…" : "Install Shortcut"}
+            {!token ? "Loading…" : installing ? "Downloading…" : "Install Shortcut"}
           </button>
           <p style={{ fontSize: 12, color: "var(--color-on-surface-variant)", textAlign: "center" }}>
-            Opens the Shortcuts app — just tap <strong>Add Shortcut</strong> to finish.
+            Downloads the file — tap <strong>Open in Shortcuts</strong> then <strong>Add Shortcut</strong>.
           </p>
         </div>
 
@@ -177,10 +179,10 @@ export default function ShortcutSettingsPage() {
               </div>
               <div className="flex-1">
                 <p style={{ fontSize: 17, fontWeight: 700, color: "var(--color-on-surface)" }}>
-                  Before you install
+                  How to install
                 </p>
                 <p style={{ fontSize: 13, color: "var(--color-on-surface-variant)", marginTop: 3 }}>
-                  iOS requires the Shortcuts app to have been used at least once before it can import external shortcuts.
+                  iOS downloads the shortcut file — follow the 3 steps below to add it to the Shortcuts app.
                 </p>
               </div>
             </div>
@@ -203,7 +205,7 @@ export default function ShortcutSettingsPage() {
             <div className="flex gap-2 px-1">
               <span className="material-symbols-outlined flex-shrink-0" style={{ color: "var(--color-outline)", fontSize: 16, marginTop: 1 }}>info</span>
               <p style={{ fontSize: 12, color: "var(--color-on-surface-variant)" }}>
-                If you already use Shortcuts regularly, you can tap Install Now straight away.
+                If you don&apos;t see &quot;Open in Shortcuts&quot;, tap the share icon on the downloaded file in the Files app.
               </p>
             </div>
 
@@ -214,8 +216,8 @@ export default function ShortcutSettingsPage() {
                 className="w-full py-4 rounded-2xl font-semibold flex items-center justify-center gap-2"
                 style={{ background: "var(--color-primary)", color: "#fff", fontSize: 16 }}
               >
-                <span className="material-symbols-outlined" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1" }}>check_circle</span>
-                I&apos;ve enabled it — Install Now
+                <span className="material-symbols-outlined" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1" }}>download</span>
+                Download &amp; Install
               </button>
               <button
                 onClick={() => setShowSetupModal(false)}
