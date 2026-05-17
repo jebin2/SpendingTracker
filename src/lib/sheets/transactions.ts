@@ -42,16 +42,20 @@ function invalidateRowIndex(sheetId: string) {
 
 export interface TransactionPage {
   transactions: Transaction[];
-  total: number;       // total data rows in sheet (excludes header, includes soft-deleted)
+  total: number;       // non-deleted transactions in sheet (excludes header and soft-deleted)
   hasMore: boolean;
 }
 
-// Count non-deleted rows by reading the ID column and deleted column in one batchGet.
-// Returns the number of rows that have an ID and are not soft-deleted.
-async function getRowCount(
+// Read ID and deleted columns in one batchGet.
+// Returns:
+//   physical — total rows with an ID (including soft-deleted) — used for pagination math
+//   visible  — rows with an ID that are NOT deleted — shown as "X of Y" to the user
+interface RowCounts { physical: number; visible: number }
+
+async function getRowCounts(
   sheets: ReturnType<typeof getSheetsClient>,
   sheetId: string
-): Promise<number> {
+): Promise<RowCounts> {
   const res = await sheets.spreadsheets.values.batchGet({
     spreadsheetId: sheetId,
     ranges: ["transactions!A2:A", `transactions!${COLS.deleted.letter}2:${COLS.deleted.letter}`],
@@ -60,7 +64,10 @@ async function getRowCount(
   const [idRange, deletedRange] = res.data.valueRanges ?? [];
   const ids     = idRange?.values?.[0]     ?? [];
   const deleted = deletedRange?.values?.[0] ?? [];
-  return ids.filter((id, i) => id && deleted[i] !== "TRUE").length;
+  return {
+    physical: ids.filter(Boolean).length,
+    visible:  ids.filter((id, i) => id && deleted[i] !== "TRUE").length,
+  };
 }
 
 export async function appendTransaction(
@@ -90,12 +97,14 @@ export async function getTransactions(
   pageSize = PAGE_SIZE
 ): Promise<TransactionPage> {
   const sheets = getSheetsClient(accessToken);
-  const total = await getRowCount(sheets, sheetId);
+  const { physical, visible } = await getRowCounts(sheets, sheetId);
 
-  if (total === 0) return { transactions: [], total: 0, hasMore: false };
+  if (physical === 0) return { transactions: [], total: 0, hasMore: false };
 
-  // +1 because row 1 is the header; data starts at row 2
-  const lastDataRow = total + 1;
+  // Pagination uses the PHYSICAL row count so we read the right rows from the sheet.
+  // Deleted rows occupy physical space — we must include them in the range calculation
+  // even though they are filtered out after fetching.
+  const lastDataRow = physical + 1; // +1 for the header row
   const endRow   = lastDataRow - (page - 1) * pageSize;
   const startRow = Math.max(2, endRow - pageSize + 1);
   const hasMore  = startRow > 2;
@@ -111,7 +120,8 @@ export async function getTransactions(
     .filter((r) => !isDeletedRow(r as string[]))
     .map((r) => rowToTransaction(r as string[]));
 
-  return { transactions, total, hasMore };
+  // Return visible (non-deleted) count so the UI shows "14 of 14" not "14 of 25"
+  return { transactions, total: visible, hasMore };
 }
 
 // Only searches the most recent page — safe for recently-created rows
