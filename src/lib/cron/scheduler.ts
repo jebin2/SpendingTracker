@@ -59,33 +59,37 @@ export async function runDailyJobs(): Promise<{ email: string; dedup: string }> 
     log.error("cron", "merge retry pass failed", err);
   }
 
-  // ── 4. Retry failed analyses ──────────────────────────────────────────────
+  // ── 4. Analysis — week, month, year (sequential) ──────────────────────────
+  const meta = await getMetaValues(session.accessToken, session.sheetId).catch(() => ({} as Record<string, string>));
+  const region = meta.region ?? "";
+  const lifestyleTags: string[] = meta.lifestyle_tags ? JSON.parse(meta.lifestyle_tags ?? "[]") : [];
+
+  for (const period of ["week", "month", "year"] as const) {
+    try {
+      log.info("cron", `starting analysis: ${period}`);
+      await runAnalysisJob(session, period, region, lifestyleTags);
+      log.info("cron", `analysis done: ${period}`);
+    } catch (err) {
+      log.error("cron", `analysis failed: ${period}`, err);
+    }
+  }
+
+  // ── 5. Retry failed comparisons ───────────────────────────────────────────
   try {
-    const meta = await getMetaValues(session.accessToken, session.sheetId);
-    const region = meta.region ?? "";
-    const lifestyleTags: string[] = meta.lifestyle_tags ? JSON.parse(meta.lifestyle_tags) : [];
-    const failedAnalyses = await getAnalysisCacheRowsByStatus(session.accessToken, session.sheetId, "failed");
-    for (const row of failedAnalyses) {
-      if (row.period.startsWith("compare_")) {
-        // Comparison cache row — extract merchants and period from the key
-        const parts = row.period.replace("compare_", "").split("_");
-        const period = parts.pop() ?? "month";
-        const merchants = parts.join("_").split("|");
-        if (merchants.length >= 2) {
-          log.info("cron", `retrying failed comparison: ${row.period}`);
-          await runComparisonJob(session, merchants, period, region).catch((err) =>
-            log.error("cron", "comparison retry failed", { period: row.period, err })
-          );
-        }
-      } else {
-        log.info("cron", `retrying failed analysis: ${row.period}`);
-        await runAnalysisJob(session, row.period, region, lifestyleTags).catch((err) =>
-          log.error("cron", "analysis retry failed", { period: row.period, err })
+    const failedRows = await getAnalysisCacheRowsByStatus(session.accessToken, session.sheetId, "failed");
+    for (const row of failedRows.filter((r) => r.period.startsWith("compare_"))) {
+      const parts = row.period.replace("compare_", "").split("_");
+      const p = parts.pop() ?? "month";
+      const merchants = parts.join("_").split("|");
+      if (merchants.length >= 2) {
+        log.info("cron", `retrying failed comparison: ${row.period}`);
+        await runComparisonJob(session, merchants, p, region).catch((err) =>
+          log.error("cron", "comparison retry failed", { period: row.period, err })
         );
       }
     }
   } catch (err) {
-    log.error("cron", "analysis/compare retry pass failed", err);
+    log.error("cron", "comparison retry pass failed", err);
   }
 
   return { email: emailResult, dedup: dedupResult };

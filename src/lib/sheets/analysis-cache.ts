@@ -131,6 +131,22 @@ export async function getAnalysisFromDrive(
   return Buffer.from(res.data as ArrayBuffer).toString("utf-8");
 }
 
+// Return cache entries for multiple periods in one read (used by cron/status)
+export async function getAnalysisCacheForPeriods(
+  accessToken: string,
+  sheetId: string,
+  periods: string[]
+): Promise<Record<string, CachedAnalysis | null>> {
+  const sheets = getSheetsClient(accessToken);
+  const rows = await readAnalysisCacheRows(sheets, sheetId);
+  const result: Record<string, CachedAnalysis | null> = {};
+  for (const period of periods) {
+    const row = rows.find((r) => r[1] === period);
+    result[period] = row ? rowToCachedAnalysis(row) : null;
+  }
+  return result;
+}
+
 // Return all cache rows with a given status (used by cron retry)
 export async function getAnalysisCacheRowsByStatus(
   accessToken: string,

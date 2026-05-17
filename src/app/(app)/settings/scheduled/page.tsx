@@ -5,8 +5,13 @@ import { useRouter } from "next/navigation";
 
 interface CronStatus {
   registered: boolean;
-  email: { lastRun: string | null; runningAt: string | null; txCount: number; enabled: boolean };
-  dedup: { lastRun: string | null; runningAt: string | null };
+  email:    { lastRun: string | null; runningAt: string | null; txCount: number; enabled: boolean };
+  dedup:    { lastRun: string | null; runningAt: string | null };
+  analysis: {
+    week:  { lastRun: string | null; status: string | null };
+    month: { lastRun: string | null; status: string | null };
+    year:  { lastRun: string | null; status: string | null };
+  };
   schedule: string;
 }
 
@@ -57,7 +62,12 @@ export default function ScheduledSettingsPage() {
     pollRef.current = setInterval(async () => {
       if (++ticks > 36) { stopPolling(); return; } // 6 min max
       const data = await fetchStatus();
-      if (data && !isRecentlyRunning(data.email.runningAt) && !isRecentlyRunning(data.dedup.runningAt)) {
+      const analysisRunning = data
+        ? ["week", "month", "year"].some(
+            (p) => data.analysis?.[p as "week" | "month" | "year"]?.status === "generating"
+          )
+        : false;
+      if (data && !isRecentlyRunning(data.email.runningAt) && !isRecentlyRunning(data.dedup.runningAt) && !analysisRunning) {
         stopPolling();
       }
     }, 10_000);
@@ -67,7 +77,12 @@ export default function ScheduledSettingsPage() {
     fetchStatus().then((data) => {
       setLoading(false);
       // Resume polling if anything is still running when the page opens
-      if (data && (isRecentlyRunning(data.email.runningAt) || isRecentlyRunning(data.dedup.runningAt))) {
+      const analysisRunningOnLoad = data
+        ? ["week", "month", "year"].some(
+            (p) => data.analysis?.[p as "week" | "month" | "year"]?.status === "generating"
+          )
+        : false;
+      if (data && (isRecentlyRunning(data.email.runningAt) || isRecentlyRunning(data.dedup.runningAt) || analysisRunningOnLoad)) {
         startPolling();
       }
     });
@@ -103,9 +118,19 @@ export default function ScheduledSettingsPage() {
     }
   }
 
-  const emailServerRunning = isRecentlyRunning(status?.email.runningAt ?? null);
-  const dedupServerRunning = isRecentlyRunning(status?.dedup.runningAt ?? null);
-  const isAnyRunning       = !!triggering || emailServerRunning || dedupServerRunning;
+  const emailServerRunning    = isRecentlyRunning(status?.email.runningAt ?? null);
+  const dedupServerRunning    = isRecentlyRunning(status?.dedup.runningAt ?? null);
+  const analysisServerRunning = ["week", "month", "year"].some(
+    (p) => status?.analysis?.[p as "week" | "month" | "year"]?.status === "generating"
+  );
+  const isAnyRunning = !!triggering || emailServerRunning || dedupServerRunning || analysisServerRunning;
+
+  // Most recent analysis run across all three periods
+  const analysisLastRun = ["week", "month", "year"]
+    .map((p) => status?.analysis?.[p as "week" | "month" | "year"]?.lastRun ?? null)
+    .filter(Boolean)
+    .sort()
+    .at(-1) ?? null;
 
   const jobs = [
     {
@@ -132,6 +157,17 @@ export default function ScheduledSettingsPage() {
       color:         "#0277bd",
       bg:            "#e1f5fe",
     },
+    {
+      key:           "analysis" as const,
+      icon:          "analytics",
+      label:         "Spending Analysis",
+      sub:           "Generates insights for last 7 days, this month, and this year",
+      lastRun:       analysisLastRun,
+      serverRunning: analysisServerRunning,
+      enabled:       true,
+      color:         "#6a1b9a",
+      bg:            "#f3e5f5",
+    },
   ];
 
   const runAllLabel = triggering === "all"
@@ -140,6 +176,8 @@ export default function ScheduledSettingsPage() {
     ? "Email running…"
     : dedupServerRunning
     ? "Dedup running…"
+    : analysisServerRunning
+    ? "Analysis running…"
     : "Run All Jobs Now";
 
   return (
