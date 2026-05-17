@@ -39,7 +39,7 @@ export function useDuplicateResolution(loadData: () => Promise<Transaction[]>) {
       : { is_duplicate: false, duplicate_ref: undefined }
     );
     setActiveDupGroup(null);
-    loadData();
+    await loadData();
   }
 
   async function dismissGroup(group: DuplicateGroup) {
@@ -49,7 +49,7 @@ export function useDuplicateResolution(loadData: () => Promise<Transaction[]>) {
       )
     );
     setActiveDupGroup(null);
-    loadData();
+    await loadData();
   }
 
   return { dupChecking, dupError, activeDupGroup, setActiveDupGroup, triggerDupDetect, resolveDuplicate, dismissGroup };

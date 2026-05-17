@@ -35,7 +35,7 @@ export const EditForm = forwardRef<EditFormHandle, {
   useImperativeHandle(ref, () => ({ save }));
 
   async function save() {
-    if (saving || !itemName.trim() || !amount) return;
+    if (saving || !itemName.trim() || !amount || parseFloat(amount) <= 0) return;
     setSaving(true);
 
     const updates: Partial<Transaction> = {

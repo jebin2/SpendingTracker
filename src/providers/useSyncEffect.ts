@@ -87,17 +87,22 @@ export function useSyncEffect() {
       }
 
       if (navigator.onLine) {
-        await goOnline();
+        await goOnline().catch((err) => {
+          console.error("SyncProvider: goOnline failed:", err);
+        });
       } else {
         setOnline(false);
       }
     })();
 
     const handleOffline = () => setOnline(false);
-    window.addEventListener("online", goOnline);
+    const handleOnline = () => goOnline().catch((err) => {
+      console.error("SyncProvider: goOnline (online event) failed:", err);
+    });
+    window.addEventListener("online", handleOnline);
     window.addEventListener("offline", handleOffline);
     return () => {
-      window.removeEventListener("online", goOnline);
+      window.removeEventListener("online", handleOnline);
       window.removeEventListener("offline", handleOffline);
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps

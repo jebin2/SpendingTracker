@@ -95,11 +95,17 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
     if (retrying) return;
     setError(null);
     setRetrying(true);
-    const region = localStorage.getItem("region") ?? "";
-    await receiptsApi.process(tx.id, region);
-    setTx((prev) => ({ ...prev, status: "processing" }));
-    setView("detail");
-    setRetrying(false);
+    try {
+      const region = localStorage.getItem("region") ?? "";
+      const res = await receiptsApi.process(tx.id, region);
+      if (!res.ok) throw new Error("Retry failed — please try again.");
+      setTx((prev) => ({ ...prev, status: "processing" }));
+      setView("detail");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Retry failed.");
+    } finally {
+      setRetrying(false);
+    }
   }
 
   const isInFlight = tx.status === "queued" || tx.status === "processing";
