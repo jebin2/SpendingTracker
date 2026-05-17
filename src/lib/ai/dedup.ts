@@ -23,26 +23,31 @@ export async function findDuplicates(transactions: Transaction[]): Promise<Dupli
     const raw = await generateText(
       `Find duplicate transactions within this single day: ${date}
 
-Transactions:
-${JSON.stringify(txs.map((t) => ({ id: t.id, item_name: t.item_name ?? "", merchant: t.merchant, amount: t.amount, time: t.time })))}
+Transactions (id, merchant, item_name, amount, source, notes):
+${JSON.stringify(txs.map((t) => ({
+  id:        t.id,
+  merchant:  t.merchant,
+  item_name: t.item_name ?? "",
+  amount:    t.amount,
+  source:    t.source,
+  notes:     t.notes ?? "",
+})))}
 
-A duplicate means: same item_name (or very similar) AND same amount on the same day.
+A duplicate means the same real-world payment recorded more than once (e.g. from both a receipt scan and a bank email, or from two bank alerts for the same UPI transaction).
+
 Rules:
-- "Unknown" merchant alone is NOT enough — require matching item_name
-- Different item names = NOT a duplicate even if amount matches
-- Pick the EARLIEST time entry as original_id; rest go in duplicate_ids
-- Return empty array [] if no duplicates found
+1. Same merchant (fuzzy — "OPEN MART" = "OPENMART") AND same amount → duplicate.
+2. Same merchant AND amount within ₹30 AND one source is "email" or "shortcut" → likely duplicate (bank alert may show net amount while payment app shows gross).
+3. Notes contain the same UPI ref / bank ref number → duplicate regardless of merchant spelling or minor amount difference.
+4. item_name is often empty for email imports — do NOT require matching item_name for cross-source duplicates.
+5. "Unknown" merchant with amount=0 → NOT a duplicate unless notes match.
+6. Pick the entry with the most detail (receipt > email > shortcut) as original_id; if equal, pick earliest time.
+7. Return [] if no duplicates found.
 
 Respond with JSON only:
-[
-  {
-    "original_id": "id of earliest entry to keep",
-    "duplicate_ids": ["id2", "id3"],
-    "reason": "brief reason"
-  }
-]`,
+[{"original_id":"...","duplicate_ids":["..."],"reason":"..."}]`,
       "",
-      512
+      768
     );
 
     const groups = tryParseAiJson<DuplicateGroup[]>(raw, "array");
