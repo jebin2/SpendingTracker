@@ -35,7 +35,7 @@ export default function ShortcutSettingsPage() {
       const res = await fetch("/api/shortcut/prepare", { method: "POST" });
       if (!res.ok) throw new Error("Failed to prepare install");
       const { prepareId } = await res.json() as { prepareId: string };
-      const fileUrl    = `${window.location.origin}/api/shortcut/file?id=${encodeURIComponent(prepareId)}`;
+      const fileUrl    = `${window.location.origin}/api/shortcut/install.shortcut?id=${encodeURIComponent(prepareId)}`;
       const installUrl = `shortcuts://import-shortcut?url=${encodeURIComponent(fileUrl)}&name=${encodeURIComponent("Log to FundsFlee")}`;
       window.location.href = installUrl;
     } catch {
@@ -48,9 +48,9 @@ export default function ShortcutSettingsPage() {
   const masked = token ? `${token.slice(0, 8)}••••••••••••${token.slice(-4)}` : "Loading…";
 
   const steps = [
-    { icon: "settings", text: "Open the iPhone ‘Settings’ app" },
-    { icon: "shortcut", text: "Scroll down and tap ‘Shortcuts’" },
-    { icon: "toggle_on", text: "Turn on ‘Allow Untrusted Shortcuts’" },
+    { icon: "shortcut", text: "Make sure the Shortcuts app is installed and open it once" },
+    { icon: "check_circle", text: "Run any built-in shortcut at least once (e.g. ‘Create Reminder’)" },
+    { icon: "download", text: "Come back here and tap ‘Install Now’ below" },
   ];
 
   return (
@@ -177,10 +177,10 @@ export default function ShortcutSettingsPage() {
               </div>
               <div className="flex-1">
                 <p style={{ fontSize: 17, fontWeight: 700, color: "var(--color-on-surface)" }}>
-                  One-time iOS setup needed
+                  Before you install
                 </p>
                 <p style={{ fontSize: 13, color: "var(--color-on-surface-variant)", marginTop: 3 }}>
-                  iOS blocks shortcuts from external sources by default. Enable it once and you&apos;re set forever.
+                  iOS requires the Shortcuts app to have been used at least once before it can import external shortcuts.
                 </p>
               </div>
             </div>
@@ -200,11 +200,10 @@ export default function ShortcutSettingsPage() {
               ))}
             </div>
 
-            {/* Note about greyed-out toggle */}
             <div className="flex gap-2 px-1">
               <span className="material-symbols-outlined flex-shrink-0" style={{ color: "var(--color-outline)", fontSize: 16, marginTop: 1 }}>info</span>
               <p style={{ fontSize: 12, color: "var(--color-on-surface-variant)" }}>
-                If the toggle is greyed out, open the Shortcuts app and run any shortcut once first — then try again.
+                If you already use Shortcuts regularly, you can tap Install Now straight away.
               </p>
             </div>
 
