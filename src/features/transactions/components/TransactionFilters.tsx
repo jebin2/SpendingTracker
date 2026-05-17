@@ -46,7 +46,7 @@ export const TransactionFilters = memo(function TransactionFilters({
         )}
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-2 pt-1">
         <div className="flex gap-2 overflow-x-auto pb-1">
           {(["week", "month", "year", "custom"] as const).map((p) => (
             <button
