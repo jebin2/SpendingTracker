@@ -9,6 +9,7 @@ export default function ShortcutSettingsPage() {
   const [copied,    setCopied]    = useState(false);
   const [showToken, setShowToken] = useState(false);
   const [installing, setInstalling] = useState(false);
+  const [showSetupModal, setShowSetupModal] = useState(false);
 
   useEffect(() => {
     fetch("/api/user/token").then((r) => r.json()).then((d) => setToken(d.token));
@@ -26,8 +27,9 @@ export default function ShortcutSettingsPage() {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  async function installShortcut() {
+  async function doInstall() {
     if (!token || installing) return;
+    setShowSetupModal(false);
     setInstalling(true);
     try {
       const res = await fetch("/api/shortcut/prepare", { method: "POST" });
@@ -44,6 +46,12 @@ export default function ShortcutSettingsPage() {
   }
 
   const masked = token ? `${token.slice(0, 8)}••••••••••••${token.slice(-4)}` : "Loading…";
+
+  const steps = [
+    { icon: "settings", text: "Open the iPhone ‘Settings’ app" },
+    { icon: "shortcut", text: "Scroll down and tap ‘Shortcuts’" },
+    { icon: "toggle_on", text: "Turn on ‘Allow Untrusted Shortcuts’" },
+  ];
 
   return (
     <div className="max-w-lg mx-auto px-5 pb-10">
@@ -84,21 +92,10 @@ export default function ShortcutSettingsPage() {
           </p>
         </div>
 
-        {/* Prerequisite */}
-        <div className="rounded-2xl p-4 flex gap-3" style={{ background: "#fff8e1", border: "1px solid #ffe082" }}>
-          <span className="material-symbols-outlined flex-shrink-0" style={{ color: "#f9a825", fontSize: 20, marginTop: 1 }}>warning</span>
-          <div>
-            <p style={{ fontSize: 13, fontWeight: 600, color: "#6d4c00" }}>One-time setup required</p>
-            <p style={{ fontSize: 12, color: "#795500", marginTop: 2 }}>
-              Go to <strong>Settings → Shortcuts → Allow Untrusted Shortcuts</strong> and turn it on. Without this, iOS blocks installing shortcuts from external sources.
-            </p>
-          </div>
-        </div>
-
-        {/* One-tap install */}
+        {/* Install button */}
         <div className="flex flex-col gap-3">
           <button
-            onClick={installShortcut}
+            onClick={() => token && !installing && setShowSetupModal(true)}
             disabled={!token || installing}
             className="w-full py-4 rounded-2xl font-semibold flex items-center justify-center gap-3 transition-all"
             style={{
@@ -112,14 +109,14 @@ export default function ShortcutSettingsPage() {
               ? <div className="w-5 h-5 rounded-full border-2 border-t-transparent animate-spin" style={{ borderColor: "rgba(255,255,255,0.4)", borderTopColor: "#fff" }} />
               : <span className="material-symbols-outlined" style={{ fontSize: 22, fontVariationSettings: "'FILL' 1" }}>shortcut</span>
             }
-            {!token ? "Loading…" : installing ? "Preparing…" : "Install Shortcut"}
+            {!token ? "Loading…" : installing ? "Installing…" : "Install Shortcut"}
           </button>
           <p style={{ fontSize: 12, color: "var(--color-on-surface-variant)", textAlign: "center" }}>
-            Opens the Shortcuts app to install automatically. Your token is pre-configured — just tap <strong>Add Shortcut</strong>.
+            Opens the Shortcuts app — just tap <strong>Add Shortcut</strong> to finish.
           </p>
         </div>
 
-        {/* Token card (advanced / rotate) */}
+        {/* Token card */}
         <div>
           <p style={{ fontSize: 12, color: "var(--color-outline)", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}
             className="mb-2 px-1">Your personal token</p>
@@ -159,6 +156,79 @@ export default function ShortcutSettingsPage() {
         </div>
 
       </div>
+
+      {/* Setup modal */}
+      {showSetupModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-end justify-center"
+          style={{ background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+          onClick={() => setShowSetupModal(false)}
+        >
+          <div
+            className="w-full max-w-lg rounded-t-3xl p-6 flex flex-col gap-5"
+            style={{ background: "var(--color-surface)" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0"
+                style={{ background: "#fff8e1" }}>
+                <span className="material-symbols-outlined" style={{ color: "#f9a825", fontSize: 24 }}>lock_open</span>
+              </div>
+              <div className="flex-1">
+                <p style={{ fontSize: 17, fontWeight: 700, color: "var(--color-on-surface)" }}>
+                  One-time iOS setup needed
+                </p>
+                <p style={{ fontSize: 13, color: "var(--color-on-surface-variant)", marginTop: 3 }}>
+                  iOS blocks shortcuts from external sources by default. Enable it once and you&apos;re set forever.
+                </p>
+              </div>
+            </div>
+
+            {/* Steps */}
+            <div className="flex flex-col gap-2">
+              {steps.map((step, i) => (
+                <div key={i} className="flex items-center gap-3 px-4 py-3 rounded-2xl"
+                  style={{ background: "var(--color-surface-container-lowest)", border: "1px solid var(--color-outline-variant)" }}>
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0"
+                    style={{ background: "var(--color-primary)", color: "#fff", fontSize: 13, fontWeight: 700 }}>
+                    {i + 1}
+                  </div>
+                  <span className="material-symbols-outlined flex-shrink-0" style={{ color: "var(--color-primary)", fontSize: 20 }}>{step.icon}</span>
+                  <p style={{ fontSize: 14, color: "var(--color-on-surface)" }}>{step.text}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Note about greyed-out toggle */}
+            <div className="flex gap-2 px-1">
+              <span className="material-symbols-outlined flex-shrink-0" style={{ color: "var(--color-outline)", fontSize: 16, marginTop: 1 }}>info</span>
+              <p style={{ fontSize: 12, color: "var(--color-on-surface-variant)" }}>
+                If the toggle is greyed out, open the Shortcuts app and run any shortcut once first — then try again.
+              </p>
+            </div>
+
+            {/* Buttons */}
+            <div className="flex flex-col gap-3">
+              <button
+                onClick={doInstall}
+                className="w-full py-4 rounded-2xl font-semibold flex items-center justify-center gap-2"
+                style={{ background: "var(--color-primary)", color: "#fff", fontSize: 16 }}
+              >
+                <span className="material-symbols-outlined" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                I&apos;ve enabled it — Install Now
+              </button>
+              <button
+                onClick={() => setShowSetupModal(false)}
+                className="w-full py-3 rounded-2xl font-medium"
+                style={{ background: "var(--color-surface-container)", color: "var(--color-on-surface-variant)", fontSize: 15 }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
