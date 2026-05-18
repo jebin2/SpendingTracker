@@ -23,7 +23,8 @@ export async function expandItemsToRows(
   placeholderId: string,
   base: ItemExpansionBase,
   items: ParsedReceiptItem[],
-  now: string
+  now: string,
+  totalAmount?: number
 ): Promise<void> {
   for (const item of items) {
     const tx: Transaction = {
@@ -40,6 +41,26 @@ export async function expandItemsToRows(
     };
     await appendTransaction(session.accessToken, session.sheetId, tx);
   }
+
+  if (totalAmount !== undefined) {
+    const itemsTotal = items.reduce((s, i) => s + i.price, 0);
+    const diff = parseFloat((totalAmount - itemsTotal).toFixed(2));
+    if (diff > 0.01) {
+      const adjustTx: Transaction = {
+        id: crypto.randomUUID(),
+        ...base,
+        amount: diff,
+        item_name: "Taxes & Fees",
+        quantity: undefined,
+        notes: undefined,
+        status: "done",
+        created_at: now,
+        updated_at: now,
+      };
+      await appendTransaction(session.accessToken, session.sheetId, adjustTx);
+    }
+  }
+
   await updateTransactionField(session.accessToken, session.sheetId, placeholderId, {
     deleted: true,
     status: "done",

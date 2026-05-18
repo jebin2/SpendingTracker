@@ -36,7 +36,8 @@ export async function runTextParseJob(
         notes: parsed.notes,
         source: placeholder.source,
         raw_input: placeholder.raw_input,
-      }, items, now);
+        receipt_id: txId,
+      }, items, now, parsed.amount);
     } else {
       const singleItem = items[0];
       await updateTransactionField(session.accessToken, session.sheetId, txId, {

@@ -75,7 +75,7 @@ export async function processReceipt(
         source: "receipt",
         receipt_url: placeholder.receipt_url,
         receipt_id: receiptId,
-      }, items, now);
+      }, items, now, parsed.amount);
     } else {
       const singleItem = items[0];
       await updateTransactionField(session.accessToken, session.sheetId, receiptId, {
