@@ -10,6 +10,7 @@ export interface ParsedTransaction {
   category: string;
   subcategory?: string;
   item_name?: string;
+  items?: ParsedReceiptItem[];
   notes?: string;
   payment_method: PaymentMethod;
   confidence: number;
@@ -26,13 +27,3 @@ export interface ParsedReceiptItem {
   category?: string;
 }
 
-export interface ParsedReceipt {
-  merchant: string;
-  date: string;
-  time: string;
-  payment_method: PaymentMethod;
-  category: string;        // overall/default category
-  confidence: number;
-  uncertain_fields: string[];
-  items: ParsedReceiptItem[];
-}

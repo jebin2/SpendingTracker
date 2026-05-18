@@ -2,6 +2,7 @@ import { parseTransactionText } from "@/lib/ai/parse-text";
 import { getTransactionById, updateTransactionField } from "@/lib/sheets";
 import { todayISO } from "@/lib/date/iso";
 import { log } from "@/lib/logger";
+import { expandItemsToRows, itemQuantity } from "@/server/services/expandItems";
 import type { SheetSession } from "@/server/services/types";
 
 export async function runTextParseJob(
@@ -21,22 +22,40 @@ export async function runTextParseJob(
     }
 
     const parsed = await parseTransactionText(placeholder.raw_input, region, todayISO());
+    const items = parsed.items ?? [];
+    const now = new Date().toISOString();
 
-    await updateTransactionField(session.accessToken, session.sheetId, txId, {
-      date:           parsed.date,
-      time:           parsed.time,
-      amount:         parsed.amount,
-      merchant:       parsed.merchant,
-      category:       parsed.category,
-      subcategory:    parsed.subcategory,
-      item_name:      parsed.item_name,
-      payment_method: parsed.payment_method,
-      notes:          parsed.notes,
-      status:         "done",
-      updated_at:     new Date().toISOString(),
-    });
+    if (items.length > 1) {
+      await expandItemsToRows(session, txId, {
+        date: parsed.date,
+        time: parsed.time,
+        merchant: parsed.merchant,
+        category: parsed.category,
+        subcategory: parsed.subcategory,
+        payment_method: parsed.payment_method,
+        notes: parsed.notes,
+        source: placeholder.source,
+        raw_input: placeholder.raw_input,
+      }, items, now);
+    } else {
+      const singleItem = items[0];
+      await updateTransactionField(session.accessToken, session.sheetId, txId, {
+        date:           parsed.date,
+        time:           parsed.time,
+        amount:         parsed.amount,
+        merchant:       parsed.merchant,
+        category:       parsed.category,
+        subcategory:    parsed.subcategory,
+        item_name:      singleItem?.name ?? parsed.item_name,
+        quantity:       singleItem ? itemQuantity(singleItem.qty, singleItem.unit) : undefined,
+        payment_method: parsed.payment_method,
+        notes:          parsed.notes,
+        status:         "done",
+        updated_at:     now,
+      });
+    }
 
-    log.info("text-parse", "done", { txId, merchant: parsed.merchant, amount: parsed.amount });
+    log.info("text-parse", "done", { txId, merchant: parsed.merchant, amount: parsed.amount, itemCount: items.length });
   } catch (err) {
     log.error("text-parse", "failed", { txId, err });
     await updateTransactionField(session.accessToken, session.sheetId, txId, { status: "failed" }).catch(() => {});

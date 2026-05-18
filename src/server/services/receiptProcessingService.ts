@@ -1,14 +1,13 @@
 import { parseReceiptImage } from "@/lib/ai/parse-image";
 import { todayISO } from "@/lib/date/iso";
 import {
-  appendTransaction,
   downloadReceiptFromDrive,
   getTransactionById,
   getMetaValues,
   updateTransactionField,
 } from "@/lib/sheets";
+import { expandItemsToRows, itemQuantity, unitPriceNote } from "./expandItems";
 import { sendPushNotification } from "@/lib/push";
-import type { Transaction } from "@/types";
 import type { SheetSession } from "./types";
 
 const VALID_RECEIPT_MIME_TYPES = ["image/jpeg", "image/png", "image/webp"] as const;
@@ -33,15 +32,6 @@ function toReceiptMimeType(mimeType: string): ValidReceiptMimeType {
     : "image/jpeg";
 }
 
-function receiptItemQuantity(item: { qty: number; unit?: string | null }): string | undefined {
-  if (item.qty > 1) return `${item.qty}${item.unit ? ` ${item.unit}` : ""}`;
-  return item.unit ? `1 ${item.unit}` : undefined;
-}
-
-function receiptItemNotes(item: { qty: number; unit_price?: number | null }): string | undefined {
-  return item.unit_price != null && item.qty > 1 ? `₹${item.unit_price}/unit` : undefined;
-}
-
 export async function processReceipt(
   session: SheetSession,
   request: ProcessReceiptRequest
@@ -62,7 +52,7 @@ export async function processReceipt(
     }
 
     const { buffer, mimeType } = await downloadReceiptFromDrive(session.accessToken, fileId);
-    const receipt = await parseReceiptImage(
+    const parsed = await parseReceiptImage(
       buffer.toString("base64"),
       toReceiptMimeType(mimeType),
       request.region,
@@ -71,49 +61,52 @@ export async function processReceipt(
 
     const receiptId = request.txId;
     const now = new Date().toISOString();
+    const items = parsed.items ?? [];
 
-    for (const item of receipt.items) {
-      const tx: Transaction = {
-        id: crypto.randomUUID(),
-        date: receipt.date,
-        time: receipt.time,
-        amount: item.price,
-        merchant: receipt.merchant,
-        category: item.category || receipt.category,
-        item_name: item.name,
-        payment_method: receipt.payment_method,
+    if (items.length > 1) {
+      await expandItemsToRows(session, receiptId, {
+        date: parsed.date,
+        time: parsed.time,
+        merchant: parsed.merchant,
+        category: parsed.category,
+        subcategory: parsed.subcategory,
+        payment_method: parsed.payment_method,
+        notes: parsed.notes,
         source: "receipt",
         receipt_url: placeholder.receipt_url,
         receipt_id: receiptId,
-        status: "done",
-        quantity: receiptItemQuantity(item),
-        notes: receiptItemNotes(item),
-        created_at: now,
-        updated_at: now,
-      };
-
-      await appendTransaction(session.accessToken, session.sheetId, tx);
+      }, items, now);
+    } else {
+      const singleItem = items[0];
+      await updateTransactionField(session.accessToken, session.sheetId, receiptId, {
+        date:           parsed.date,
+        time:           parsed.time,
+        amount:         parsed.amount,
+        merchant:       parsed.merchant,
+        category:       parsed.category,
+        subcategory:    parsed.subcategory,
+        item_name:      singleItem?.name ?? parsed.item_name,
+        quantity:       singleItem ? itemQuantity(singleItem.qty, singleItem.unit) : undefined,
+        payment_method: parsed.payment_method,
+        notes:          (singleItem ? unitPriceNote(singleItem.qty, singleItem.unit_price) : undefined) ?? parsed.notes,
+        receipt_id:     receiptId,
+        status:         "done",
+        updated_at:     now,
+      });
     }
 
-    await updateTransactionField(session.accessToken, session.sheetId, request.txId, {
-      deleted: true,
-      status: "done",
-    });
-
-    // Send push notification if user has subscribed
-    const meta = await getMetaValues(session.accessToken, session.sheetId).catch(() => ({} as Record<string,string>));
+    const meta = await getMetaValues(session.accessToken, session.sheetId).catch(() => ({} as Record<string, string>));
     if (meta.push_subscription) {
-      const merchant = receipt.merchant || "Receipt";
-      const total = receipt.items.reduce((s, i) => s + i.price, 0);
+      const total = items.length > 1 ? items.reduce((s, i) => s + i.price, 0) : parsed.amount;
       sendPushNotification(meta.push_subscription, {
-        title: `${merchant} receipt processed`,
-        body: `${receipt.items.length} item${receipt.items.length !== 1 ? "s" : ""} · ₹${Math.round(total).toLocaleString("en-IN")}`,
+        title: `${parsed.merchant || "Receipt"} processed`,
+        body: `${items.length || 1} item${(items.length || 1) !== 1 ? "s" : ""} · ₹${Math.round(total).toLocaleString("en-IN")}`,
         tag: "receipt-done",
         url: "/transactions",
-      }).catch(() => {}); // fire-and-forget
+      }).catch(() => {});
     }
 
-    return { ok: true, txId: receiptId, itemCount: receipt.items.length };
+    return { ok: true, txId: receiptId, itemCount: items.length || 1 };
   } catch (err) {
     await updateTransactionField(session.accessToken, session.sheetId, request.txId, { status: "failed" }).catch(() => {});
     throw err;
