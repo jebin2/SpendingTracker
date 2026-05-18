@@ -74,10 +74,13 @@ export function useDuplicateResolution(loadData: () => Promise<Transaction[]>) {
   }
 
   async function resolveDuplicate(tx: Transaction, action: "keep" | "remove") {
-    await transactionsApi.update(tx.id, action === "remove"
-      ? { deleted: true }
-      : { is_duplicate: false, duplicate_ref: undefined }
-    );
+    if (action === "remove") {
+      // Use DELETE so the server also clears orphaned is_duplicate flags on
+      // any transactions that point to this one as their duplicate original.
+      await transactionsApi.delete(tx.id);
+    } else {
+      await transactionsApi.update(tx.id, { is_duplicate: false, duplicate_ref: undefined });
+    }
     setActiveDupGroup(null);
     await loadData();
   }
