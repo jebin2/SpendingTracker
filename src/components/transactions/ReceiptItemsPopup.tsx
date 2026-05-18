@@ -7,7 +7,7 @@ import { useTransactionsStore } from "@/store/transactionsStore";
 import { getLocalTransactions } from "@/lib/offline";
 import { useEffect, useState } from "react";
 
-export function ReceiptItemsPopup({ receiptId, onClose }: { receiptId: string; onClose: () => void }) {
+export function ReceiptItemsPopup({ receiptId, source, onClose }: { receiptId: string; source?: string; onClose: () => void }) {
   // Try the already-loaded store first (covers all loaded pages, no network needed)
   const storeTransactions = useTransactionsStore((s) => s.transactions);
 
@@ -53,7 +53,9 @@ export function ReceiptItemsPopup({ receiptId, onClose }: { receiptId: string; o
         onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 pt-5 pb-3">
           <div>
-            <p style={{ fontSize: 17, fontWeight: 700, color: "var(--color-on-surface)" }}>All items from this receipt</p>
+            <p style={{ fontSize: 17, fontWeight: 700, color: "var(--color-on-surface)" }}>
+              {source === "receipt" ? "All items from this receipt" : "All items from this order"}
+            </p>
             {!loading && (
               <p style={{ fontSize: 13, color: "var(--color-on-surface-variant)" }}>
                 {items.length} items · {formatINR(total)} total

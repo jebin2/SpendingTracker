@@ -308,8 +308,12 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
                 <button onClick={() => setShowReceiptItems(true)}
                   className="flex items-center gap-3 px-4 py-3.5 rounded-2xl border w-full text-left"
                   style={{ borderColor: "var(--color-outline-variant)", background: "var(--color-surface-container-lowest)", cursor: "pointer" }}>
-                  <span className="material-symbols-outlined" style={{ color: "var(--color-primary)", fontSize: 20, fontVariationSettings: "'FILL' 1" }}>receipt</span>
-                  <p style={{ fontSize: 14, fontWeight: 500, color: "var(--color-primary)" }}>View all items from this receipt</p>
+                  <span className="material-symbols-outlined" style={{ color: "var(--color-primary)", fontSize: 20, fontVariationSettings: "'FILL' 1" }}>
+                    {tx.source === "receipt" ? "receipt" : "list_alt"}
+                  </span>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: "var(--color-primary)" }}>
+                    {tx.source === "receipt" ? "View all items from this receipt" : "View all items from this order"}
+                  </p>
                   <span className="material-symbols-outlined ml-auto" style={{ color: "var(--color-outline)", fontSize: 18 }}>expand_more</span>
                 </button>
               )}
@@ -329,7 +333,7 @@ export function TransactionSheet({ tx: initialTx, onClose }: TransactionSheetPro
       </div>
 
       {showReceiptItems && tx.receipt_id && (
-        <ReceiptItemsPopup receiptId={tx.receipt_id} onClose={() => setShowReceiptItems(false)} />
+        <ReceiptItemsPopup receiptId={tx.receipt_id} source={tx.source} onClose={() => setShowReceiptItems(false)} />
       )}
     </>
   );
