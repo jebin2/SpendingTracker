@@ -18,9 +18,11 @@ You can also share a message directly from your phone's Messages app — tap Sha
 
 2. A temporary **"Parsing SMS…"** entry appears at the top of the list while the text is being read.
 
-3. In the background, AI reads the message and extracts the transaction details: date, time, amount, merchant, category, payment method, and any notes.
+3. In the background, AI reads the message and extracts the transaction details: date, time, amount, merchant, category, payment method, notes, and any individual line items with their quantities.
 
-4. When done, the placeholder is updated with all the extracted information and becomes a normal transaction in your list.
+4. When done, one of two things happens depending on how many items were found:
+   - **Single item or no items** — the placeholder is updated in place with all extracted details, including item name and quantity if available.
+   - **Multiple items** — the placeholder is removed and each item becomes its own separate transaction entry, with its individual price, name, and quantity.
 
 5. If the AI cannot read the message — for example, if it is not a payment notification — the entry stays but shows an error state. You can edit it manually or delete it.
 
@@ -28,7 +30,7 @@ You can also share a message directly from your phone's Messages app — tap Sha
 
 ## What kinds of text work
 
-The AI can read bank debit alerts, UPI payment confirmations, credit card transaction notifications, and most other payment SMS formats. Plain payment descriptions also work.
+The AI can read bank debit alerts, UPI payment confirmations, credit card transaction notifications, and most other payment SMS formats. Order confirmation emails and pasted order summaries (such as Amazon or Flipkart orders) also work — each item in the order becomes its own transaction.
 
 ---
 

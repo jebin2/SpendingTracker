@@ -21,9 +21,11 @@ Open the **Capture** screen and switch to the **Camera** tab. Choose how you wan
 
 3. A temporary **"Processing…"** entry appears at the top of the list to show the receipt is being read.
 
-4. In the background, AI scans the receipt and extracts each line item — its name, quantity, unit price, and total — as well as the merchant name and categories.
+4. In the background, AI scans the receipt — using the same prompt and parsing flow as text capture — and extracts each line item: name, quantity, unit, unit price, and total, along with the merchant name and categories.
 
-5. When finished, the placeholder disappears and each item on the receipt becomes its own transaction entry in the list.
+5. When finished, one of two things happens:
+   - **Multiple items** — the placeholder disappears and each item becomes its own transaction entry.
+   - **Single item** — the placeholder is updated in place with the item details (name, quantity, category).
 
 6. If you have push notifications turned on, a notification arrives on your device to let you know the receipt is done — even if the app is not open.
 
